@@ -1,3 +1,5 @@
 *.o
 *.obj
 lab1/
+*.tar.gz
+*.zip

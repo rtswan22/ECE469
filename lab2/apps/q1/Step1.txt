@@ -1,0 +1,16 @@
+Authors: rswan & jgaona
+
+How many semaphores are available in DLXOS?
+- 32 are available as seen by MAX_SEMS in include/os/synch.h
+
+How many locks are available in DLXOS?
+- 64 are available as seen by MAX_LOCKS in include/os/synch.h
+
+How is a semaphore created in DLXOS?
+- BLANK
+
+Explain how sem_signal and sem_wait work.
+- BLANK
+
+What is the handle and how is it used to access semaphores in DLXOS?
+- BLANK
