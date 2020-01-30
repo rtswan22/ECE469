@@ -7,10 +7,12 @@ How many locks are available in DLXOS?
 - 64 are available as seen by MAX_LOCKS in include/os/synch.h
 
 How is a semaphore created in DLXOS?
-- BLANK
+- Using the "sem_t sem_create(int count)" function that is protyped in lab2/include/lab2-api.h
+- The process to create it is calling the function which then disables interrupts to find an available semaphore which is then in use and then initialized to hold the count that was defined by the function call. Interrupts are then re-enabled.
 
 Explain how sem_signal and sem_wait work.
-- BLANK
+- sem_signal: Checks that the sem that is passed is valid and initialized. If it is, it disables interrupts and increments the semaphore's count. It then checks the queue and wakes up a sleeping process if available. Interrupts are then re-enabled. 
+- sem_wait: Checks that the sem that is passed is valid and initialized. If it is, it disables interrupts and checks if the semaphore's count is <=0. If it is, it re-enables interrupts while it sleeps sleeps until the semaphore becomes available so it can gain permission and decrement the semaphore. If the semaphore's count is >=1 then it gains permission and decrements the semaphore. Interrupts are then re-enabled.
 
 What is the handle and how is it used to access semaphores in DLXOS?
-- BLANK
+- A handle is a unique identifier for a page in shared memory or a semaphore. The process can give the handle to the OS which can give the process indirect access to the semaphore.
