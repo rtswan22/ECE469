@@ -3,3 +3,7 @@
 lab1/
 *.tar.gz
 *.zip
+*work/
+*.depend
+lab2/bin/
+lab2/lib/
