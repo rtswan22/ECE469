@@ -7,3 +7,4 @@ lab1/
 *.depend
 lab2/bin/
 lab2/lib/
+*.swp

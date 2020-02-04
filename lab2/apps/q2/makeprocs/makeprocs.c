@@ -8,7 +8,7 @@ void main (int argc, char *argv[])
 {
   int numprocs = 0;               // Used to store number of processes to create
   int i;                          // Loop index variable
-  missile_code *mc;               // Used to get address of shared memory page
+  buffer *circ_buff;               // Used to get address of shared memory page
   uint32 h_mem;                   // Used to hold handle to shared memory page
   sem_t s_procs_completed;        // Semaphore used to wait until all spawned processes have completed
   char h_mem_str[10];             // Used as command-line argument to pass mem_handle to new processes
@@ -20,7 +20,7 @@ void main (int argc, char *argv[])
   }
 
   // Convert string from ascii command line argument to integer number
-  numprocs = dstrtol(argv[1], NULL, 10); // the "10" means base 10
+  numprocs = dstrtol(argv[1], NULL, 10) * 2; // processes to be created in producer-consumer pairs
   Printf("Creating %d processes\n", numprocs);
 
   // Allocate space for a shared memory page, which is exactly 64KB
@@ -32,14 +32,14 @@ void main (int argc, char *argv[])
   }
 
   // Map shared memory page into this process's memory space
-  if ((mc = (missile_code *)shmat(h_mem)) == NULL) {
+  if ((circ_buff = (buffer *)shmat(h_mem)) == NULL) {
     Printf("Could not map the shared page to virtual address in "); Printf(argv[0]); Printf(", exiting..\n");
     Exit();
   }
 
   // Put some values in the shared memory, to be read by other processes
-  mc->numprocs = numprocs;
-  mc->really_important_char = 'A';
+  circ_buff->head = circ_buff->items; //CHECK
+  circ_buff->tail = circ_buff->items; //CHECK
 
   // Create semaphore to not exit this process until all other processes 
   // have signalled that they are complete.  To do this, we will initialize
@@ -61,9 +61,10 @@ void main (int argc, char *argv[])
   // Now we can create the processes.  Note that you MUST end your call to
   // process_create with a NULL argument so that the operating system
   // knows how many arguments you are sending.
-  for(i=0; i<numprocs; i++) {
-    process_create(FILENAME_TO_RUN, h_mem_str, s_procs_completed_str, NULL);
-    Printf("Process %d created\n", i);
+  for(i=0; i<(numprocs/2); i++) {
+    process_create(PRODUCER_TO_RUN, h_mem_str, s_procs_completed_str, NULL);
+    process_create(CONSUMER_TO_RUN, h_mem_str, s_procs_completed_str, NULL);
+    Printf("Producer and Consumer %d created\n", i);
   }
 
   // And finally, wait until all spawned processes have finished.

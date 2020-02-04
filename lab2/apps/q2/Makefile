@@ -1,10 +1,11 @@
 default:
 	cd makeprocs; make
-	cd spawn_me; make
-
+	cd producer; make
+	cd consumer; make
 clean:
 	cd makeprocs; make clean
-	cd spawn_me; make clean
-
+	cd producer; make clean
+	cd producer; make clean
 run:
 	cd ../../bin; dlxsim -x os.dlx.obj -a -u makeprocs.dlx.obj 3; ee469_fixterminal
+//CHECK how to pass args or if this is to act as the command line
