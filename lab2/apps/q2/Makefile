@@ -8,4 +8,3 @@ clean:
 	cd producer; make clean
 run:
 	cd ../../bin; dlxsim -x os.dlx.obj -a -u makeprocs.dlx.obj 3; ee469_fixterminal
-//CHECK how to pass args or if this is to act as the command line

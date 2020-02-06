@@ -38,8 +38,8 @@ void main (int argc, char *argv[])
   }
 
   // Put some values in the shared memory, to be read by other processes
-  circ_buff->head = circ_buff->items; //CHECK
-  circ_buff->tail = circ_buff->items; //CHECK
+  circ_buff->head = 0;
+  circ_buff->tail = 0;
 
   // Create semaphore to not exit this process until all other processes 
   // have signalled that they are complete.  To do this, we will initialize

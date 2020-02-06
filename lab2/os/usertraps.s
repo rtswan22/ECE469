@@ -181,7 +181,7 @@ _cond_signal:
 .proc _cond_broadcast
 .global _cond_broadcast
 _cond_broadcast:
-	trap	#0x455
+	trap	#0x459
 	jr	r31
 	nop
 .endproc _cond_broadcast
