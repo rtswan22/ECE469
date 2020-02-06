@@ -13,7 +13,7 @@
 
 static Sem sems[MAX_SEMS]; 	// All semaphores in the system
 static Lock locks[MAX_LOCKS];   // All locks in the system
-
+static Cond conds[MAX_CONDS]; //Q3
 extern struct PCB *currentPCB; 
 //----------------------------------------------------------------------
 //	SynchModuleInit
@@ -27,10 +27,10 @@ int SynchModuleInit() {
     sems[i].inuse = 0;
   }
   for(i=0; i<MAX_LOCKS; i++) {
-    // Your stuff for initializing locks goes here
+    locks[i].inuse = 0; //Q3
   }
   for(i=0; i<MAX_CONDS; i++) {
-    // Your stuff for initializing Condition variables goes here
+    conds[i].inuse = 0; //Q3
   }
   dbprintf ('p', "SynchModuleInit: Leaving SynchModuleInit\n");
   return SYNC_SUCCESS;
@@ -310,6 +310,18 @@ int LockHandleRelease(lock_t lock) {
 }
 
 //--------------------------------------------------------------------------
+//	CondInit
+//--------------------------------------------------------------------------
+int CondInit(Cond* cond) {
+  if (!cond) return SYNC_FAIL;
+  if (AQueueInit (&cond->waiting) != QUEUE_SUCCESS) {
+    printf("FATAL ERROR: could not initialize conditional variable waiting queue in CondInit!\n");
+    exitsim();
+  }
+  return SYNC_SUCCESS;
+}
+
+//--------------------------------------------------------------------------
 //	CondCreate
 //
 //	This function grabs a condition variable from the system-wide pool of
@@ -324,8 +336,25 @@ int LockHandleRelease(lock_t lock) {
 //	should return handle of the condition variable.
 //--------------------------------------------------------------------------
 cond_t CondCreate(lock_t lock) {
-  // Your code goes here
-  return SYNC_FAIL;
+  // Q3: unfinished
+  if(lock < 0 || lock > MAX_LOCKS - 1 || !locks[lock].inuse) return INVALID_COND; //is lock valid
+
+  cond_t cond;
+  uint32 intrval;
+
+  intrval = DisableIntrs();
+  for(cond=0; cond<MAX_CONDS; cond++) {
+    if(conds[cond].inuse==0) {
+      conds[cond].inuse = 1;
+      break;
+    }
+  }
+  RestoreIntrs(intrval);
+  if(cond==MAX_CONDS) return INVALID_COND; //is there a cond available
+
+  if (CondInit(&conds[cond]) != SYNC_SUCCESS) return INVALID_COND; //init cond
+  conds[cond].lock = lock;
+  return cond;
 }
 
 //---------------------------------------------------------------------------
@@ -352,7 +381,7 @@ cond_t CondCreate(lock_t lock) {
 //	CondHandleBroadcast releases the lock explicitly.
 //---------------------------------------------------------------------------
 int CondHandleWait(cond_t c) {
-  // Your code goes here
+  // Q3: unfinished
   return SYNC_SUCCESS;
 }
 
@@ -378,7 +407,7 @@ int CondHandleWait(cond_t c) {
 //	must explicitly release the lock after the call is complete.
 //---------------------------------------------------------------------------
 int CondHandleSignal(cond_t c) {
-  // Your code goes here
+  // Q3: unfinished
   return SYNC_SUCCESS;
 }
 
@@ -398,6 +427,6 @@ int CondHandleSignal(cond_t c) {
 //	must explicitly release the lock after the call completion.
 //---------------------------------------------------------------------------
 int CondHandleBroadcast(cond_t c) {
-  // Your code goes here
+  // Q3: unfinished
   return SYNC_SUCCESS;
 }
