@@ -313,11 +313,14 @@ int LockHandleRelease(lock_t lock) {
 //	CondInit
 //--------------------------------------------------------------------------
 int CondInit(Cond* cond) {
+  // Q3
+/*
   if (!cond) return SYNC_FAIL;
   if (AQueueInit (&cond->waiting) != QUEUE_SUCCESS) {
     printf("FATAL ERROR: could not initialize conditional variable waiting queue in CondInit!\n");
     exitsim();
   }
+*/
   return SYNC_SUCCESS;
 }
 
@@ -337,6 +340,7 @@ int CondInit(Cond* cond) {
 //--------------------------------------------------------------------------
 cond_t CondCreate(lock_t lock) {
   // Q3: unfinished
+/*
   if(lock < 0 || lock > MAX_LOCKS - 1 || !locks[lock].inuse) return INVALID_COND; //is lock valid
 
   cond_t cond;
@@ -355,6 +359,8 @@ cond_t CondCreate(lock_t lock) {
   if (CondInit(&conds[cond]) != SYNC_SUCCESS) return INVALID_COND; //init cond
   conds[cond].lock = lock;
   return cond;
+*/
+  return SYNC_FAIL;
 }
 
 //---------------------------------------------------------------------------
