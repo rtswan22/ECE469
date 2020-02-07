@@ -23,38 +23,34 @@ void main (int argc, char *argv[])
 
   // Map shared memory page into this process's memory space
   // if ((mc = (missile_code *)shmat(h_mem)) == NULL) {
-if((circ = (buffer *)shmat(h_mem))==NULL)
-  { Printf("Could not map the virtual address to the memory in "); Printf(argv[0]); Printf(", exiting...\n");
-   Exit();
+  if((circ = (buffer *)shmat(h_mem))==NULL) {
+    Printf("Could not map the virtual address to the memory in "); Printf(argv[0]); Printf(", exiting...\n");
+    Exit();
   }
-char string[] = "Hello world";
+  char string[] = "Hello world";
   int len = dstrlen(string);
 
-for(int i = 0; i  < length; i++)
-  {
-	//if buffer is full
-    while (((circ->head + 1) % BUFFERSIZE) == circ->tail);
+  for(int i = 0; i  < length; i++) {
+    //if buffer is full
+    while (((circ->head + 1) % BUFFER_SIZE) == circ->tail);
     //acquire lock
     if(lock_acquire(lock) != SYNC_SUCCESS) {
       Printf("Lock failure.\n");
-      Exit();
-			
+      Exit();			
     }
-	//else buffer not full so add to buffer
-	else{
-		   Printf("Producer %d inserted: %c\n", getpid(), str[i]);
-		   cicr->item[circ->head] = str[i];
-		   circ->head = (circ->head + 1) % BUFFERSIZE;
-		// Release the lock after a character has been added
-		if (lock_release(lock) != SYNC_SUCCESS ) {
-			Printf("Lock not released.\n");
-			Exit();
-		}
-		 }
-
+    //else buffer not full so add to buffer
+    else{
+      Printf("Producer %d inserted: %c\n", getpid(), str[i]);
+      cicr->item[circ->head] = str[i];
+      circ->head = (circ->head + 1) % BUFFER_SIZE;
+      // Release the lock after a character has been added
+      if (lock_release(lock) != SYNC_SUCCESS ) {
+        Printf("Lock not released.\n");
+        Exit();
+      }
+    }
   }
 														 
- 
   // Signal the semaphore to tell the ilurffffeforiginal process that we're done
   Printf("Producer: PID %d is complete.\n", getpid());
   if(sem_signal(s_procs_completed) != SYNC_SUCCESS) {
