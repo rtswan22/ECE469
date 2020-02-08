@@ -460,7 +460,55 @@ int CondHandleWait(cond_t cond) {
 //---------------------------------------------------------------------------
 int CondHandleSignal(cond_t c) {
   // Q3: unfinished
+// Q3
+  if (cond < 0) return SYNC_FAIL;
+  if (cond >= MAX_CONDS) return SYNC_FAIL;
+  if (!conds[cond].inuse) return SYNC_FAIL;
+  return CondWait(&conds[cond]);
+}
   return SYNC_SUCCESS;
+}
+
+int CondSignal(Cond *cv)
+{
+
+ Link *l;
+  int intrval;
+PCB* pcb
+    
+  if (!cv) return SYNC_FAIL;
+
+  intrval = DisableIntrs (); // CHECK: where should interrupts go?
+  //dbprintf ('I', "CondWait: Old interrupt value was 0x%x.\n", intrval);
+  dbprintf ('s', "CondSignal: Proc %d signaling on cond %d, lock=%d.\n", GetCurrentPid(), (int)(cv-cv), cv->lock);
+
+  // Check to see if the current process owns the lock
+  if (locks[cv->lock].pid != GetCurrentPid()) {
+    dbprintf('s', "CondSignal: Proc %d does not own lock %d\n", GetCurrentPid(), (cv->lock));
+    RestoreIntrs(intrval);
+    return SYNC_FAIL; // CHECK
+  }
+
+
+  if (!AQueueEmpty(&cv->waiting)) {
+	 // there is a process to wake up
+      l = AQueueFirst(&sem->waiting);
+      pcb = (PCB *)AQueueObject(l);
+  	if ((AQueueRemove(&l) != QUEUE_SUCCESS) {
+    		printf("FATAL ERROR: could not REMOVE link for LOCK QUEUE in CondSIGNAL!\n");
+    		exitsim();
+  	}
+
+  	dbprintf('s', "CondSignal: Waking up PID %d.\n", (int)(GetPidFromAddress(pcb)));
+	ProcessWakeup(pcb);
+	}
+  
+ 
+  RestoreIntrs (intrval); // CHECK: where should interrupts go?
+  return SYNC_SUCCESS; //RETURN 0?
+}
+
+
 }
 
 //---------------------------------------------------------------------------
@@ -479,6 +527,45 @@ int CondHandleSignal(cond_t c) {
 //	must explicitly release the lock after the call completion.
 //---------------------------------------------------------------------------
 int CondHandleBroadcast(cond_t c) {
+// Q3
+  if (cond < 0) return SYNC_FAIL;
+  if (cond >= MAX_CONDS) return SYNC_FAIL;
+  if (!conds[cond].inuse) return SYNC_FAIL;
+  return CondWait(&conds[cond]);
   // Q3: unfinished
   return SYNC_SUCCESS;
 }
+
+int CondBroadcast(Cond *cv) {
+  Link *l;
+  int intrs;
+  PCB *pcb;
+
+  if (!cv) return SYNC_FAIL;
+
+  intrs = DisableIntrs();
+  dbprintf ('s', "CondBroadcast: Proc %d signaling on cond %d, lock=%d.\n", GetCurrentPid(), (int)(cv-cv), cv->lock);
+
+  // Check to see if the current process owns the lock
+  if (locks[cv->lock].pid != GetCurrentPid()) {
+    dbprintf('s', "CondBroadcast: Proc %d does not own lock %d\n", GetCurrentPid(), (cv->lock));
+    RestoreIntrs(intrval);
+    return SYNC_FAIL; // CHECK
+  }
+
+  while(!AQueueEmpty(&cv->waiting)) {
+    l = AQueueFirst(&cv->waiting);
+    pcb = (PCB *)AQueueObject(l);
+    if (AQueueRemove(&l) != QUEUE_SUCCESS) {
+      printf("FATAL ERROR: could not remove link from condition variable queue in CondBroadcast");
+      exitsim();
+    }
+    dbprintf('s', "CondBroadcast: Waking up PID %d.\n", (int)(GetPidFromAddress(pcb)));
+    ProcessWakeup(pcb);
+  }
+  RestoreIntrs(intrs);
+  return SYNC_SUCCESS;
+}
+
+
+
