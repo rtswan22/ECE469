@@ -314,13 +314,13 @@ int LockHandleRelease(lock_t lock) {
 //--------------------------------------------------------------------------
 int CondInit(Cond* cond) {
   // Q3
-/*
+
   if (!cond) return SYNC_FAIL;
   if (AQueueInit (&cond->waiting) != QUEUE_SUCCESS) {
     printf("FATAL ERROR: could not initialize conditional variable waiting queue in CondInit!\n");
     exitsim();
   }
-*/
+
   return SYNC_SUCCESS;
 }
 
@@ -340,11 +340,10 @@ int CondInit(Cond* cond) {
 //--------------------------------------------------------------------------
 cond_t CondCreate(lock_t lock) {
   // Q3: unfinished
-/*
-  if(lock < 0 || lock > MAX_LOCKS - 1 || !locks[lock].inuse) return INVALID_COND; //is lock valid
-
   cond_t cond;
   uint32 intrval;
+
+  if(lock < 0 || lock > MAX_LOCKS - 1 || !locks[lock].inuse) return INVALID_COND; // is lock valid
 
   intrval = DisableIntrs();
   for(cond=0; cond<MAX_CONDS; cond++) {
@@ -359,7 +358,7 @@ cond_t CondCreate(lock_t lock) {
   if (CondInit(&conds[cond]) != SYNC_SUCCESS) return INVALID_COND; //init cond
   conds[cond].lock = lock;
   return cond;
-*/
+
   return SYNC_FAIL;
 }
 
@@ -386,9 +385,56 @@ cond_t CondCreate(lock_t lock) {
 //	"actually" wake up until the process calling CondHandleSignal or
 //	CondHandleBroadcast releases the lock explicitly.
 //---------------------------------------------------------------------------
-int CondHandleWait(cond_t c) {
-  // Q3: unfinished
+int CondWait (Cond *cond) {
+  // Q3
+  // does the calling function own the lock ? continue : return 1 CHECK: do they mean -1??
+  // release lock
+  // queue and sleep
+  // once awake, acquire lock
+
+  Link *l;
+  int intrval;
+    
+  if (!cond) return SYNC_FAIL;
+
+  intrval = DisableIntrs (); // CHECK: where should interrupts go?
+  dbprintf ('I', "CondWait: Old interrupt value was 0x%x.\n", intrval);
+  dbprintf ('s', "CondWait: Proc %d waiting on cond %d, lock=%d.\n", GetCurrentPid(), (int)(cond-conds), cond->lock);
+
+  // Check to see if the current process owns the lock
+  if (locks[cond->lock].pid != GetCurrentPid()) {
+    dbprintf('s', "CondWait: Proc %d does not own lock %d\n", GetCurrentPid(), (cond->lock));
+    RestoreIntrs(intrval);
+    return SYNC_FAIL; // CHECK
+  }
+
+
+  if (LockHandleRelease(cond->lock) != SYNC_SUCCESS) {// release lock
+    printf("FATAL ERROR: could not release lock in CondWait!?\n");
+    exitsim();
+  }
+  dbprintf('s', "CondWait: putting process %d to sleep\n", GetCurrentPid());
+  if ((l = AQueueAllocLink ((void *)currentPCB)) == NULL) {
+    printf("FATAL ERROR: could not allocate link for conditional variable queue in CondWait!\n");
+    exitsim();
+  }
+  if (AQueueInsertLast (&cond->waiting, l) != QUEUE_SUCCESS) {
+    printf("FATAL ERROR: could not insert new link into conditional variable waiting queue in CondWait!\n");
+    exitsim();
+  }
+  ProcessSleep();
+  while(LockHandleAcquire(cond->lock) != SYNC_SUCCESS);// reacquire lock
+  
+  RestoreIntrs (intrval); // CHECK: where should interrupts go?
   return SYNC_SUCCESS;
+}
+
+int CondHandleWait(cond_t cond) {
+  // Q3
+  if (cond < 0) return SYNC_FAIL;
+  if (cond >= MAX_CONDS) return SYNC_FAIL;
+  if (!conds[cond].inuse) return SYNC_FAIL;
+  return CondWait(&conds[cond]);
 }
 
 
