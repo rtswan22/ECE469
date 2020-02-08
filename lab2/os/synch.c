@@ -458,14 +458,13 @@ int CondHandleWait(cond_t cond) {
 //	for such a process to run, the process invoking CondHandleSignal
 //	must explicitly release the lock after the call is complete.
 //---------------------------------------------------------------------------
-int CondHandleSignal(cond_t c) {
+int CondHandleSignal(cond_t cond) {
   // Q3: unfinished
 // Q3
   if (cond < 0) return SYNC_FAIL;
   if (cond >= MAX_CONDS) return SYNC_FAIL;
   if (!conds[cond].inuse) return SYNC_FAIL;
   return CondWait(&conds[cond]);
-}
   return SYNC_SUCCESS;
 }
 
@@ -474,11 +473,11 @@ int CondSignal(Cond *cv)
 
  Link *l;
   int intrval;
-PCB* pcb
+  PCB* pcb;
     
-  if (!cv) return SYNC_FAIL;
+  if(!cv) return SYNC_FAIL;
 
-  intrval = DisableIntrs (); // CHECK: where should interrupts go?
+  intrval = DisableIntrs(); // CHECK: where should interrupts go?
   //dbprintf ('I', "CondWait: Old interrupt value was 0x%x.\n", intrval);
   dbprintf ('s', "CondSignal: Proc %d signaling on cond %d, lock=%d.\n", GetCurrentPid(), (int)(cv-cv), cv->lock);
 
@@ -492,24 +491,23 @@ PCB* pcb
 
   if (!AQueueEmpty(&cv->waiting)) {
 	 // there is a process to wake up
-      l = AQueueFirst(&sem->waiting);
+      l = AQueueFirst(&cv->waiting);
       pcb = (PCB *)AQueueObject(l);
-  	if ((AQueueRemove(&l) != QUEUE_SUCCESS) {
+      if ((AQueueRemove(&l) != QUEUE_SUCCESS)) {
     		printf("FATAL ERROR: could not REMOVE link for LOCK QUEUE in CondSIGNAL!\n");
     		exitsim();
   	}
 
-  	dbprintf('s', "CondSignal: Waking up PID %d.\n", (int)(GetPidFromAddress(pcb)));
+	  dbprintf('s', "CondSignal: Waking up PID %d.\n", (int)(GetPidFromAddress(pcb)));
 	ProcessWakeup(pcb);
 	}
   
  
-  RestoreIntrs (intrval); // CHECK: where should interrupts go?
+  RestoreIntrs(intrval); // CHECK: where should interrupts go?
   return SYNC_SUCCESS; //RETURN 0?
 }
 
 
-}
 
 //---------------------------------------------------------------------------
 //	CondHandleBroadcast
@@ -526,7 +524,7 @@ PCB* pcb
 //	for such a process to run, the process invoking CondHandleBroadcast
 //	must explicitly release the lock after the call completion.
 //---------------------------------------------------------------------------
-int CondHandleBroadcast(cond_t c) {
+int CondHandleBroadcast(cond_t cond) {
 // Q3
   if (cond < 0) return SYNC_FAIL;
   if (cond >= MAX_CONDS) return SYNC_FAIL;
@@ -538,12 +536,12 @@ int CondHandleBroadcast(cond_t c) {
 
 int CondBroadcast(Cond *cv) {
   Link *l;
-  int intrs;
+  int intrval;
   PCB *pcb;
 
   if (!cv) return SYNC_FAIL;
 
-  intrs = DisableIntrs();
+  intrval = DisableIntrs();
   dbprintf ('s', "CondBroadcast: Proc %d signaling on cond %d, lock=%d.\n", GetCurrentPid(), (int)(cv-cv), cv->lock);
 
   // Check to see if the current process owns the lock
@@ -563,7 +561,7 @@ int CondBroadcast(Cond *cv) {
     dbprintf('s', "CondBroadcast: Waking up PID %d.\n", (int)(GetPidFromAddress(pcb)));
     ProcessWakeup(pcb);
   }
-  RestoreIntrs(intrs);
+  RestoreIntrs(intrval);
   return SYNC_SUCCESS;
 }
 
