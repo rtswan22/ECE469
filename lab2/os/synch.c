@@ -464,8 +464,7 @@ int CondHandleSignal(cond_t cond) {
   if (cond < 0) return SYNC_FAIL;
   if (cond >= MAX_CONDS) return SYNC_FAIL;
   if (!conds[cond].inuse) return SYNC_FAIL;
-  return CondWait(&conds[cond]);
-  return SYNC_SUCCESS;
+  return CondSignal(&conds[cond]);
 }
 
 int CondSignal(Cond *cv)
@@ -488,21 +487,18 @@ int CondSignal(Cond *cv)
     return SYNC_FAIL; // CHECK
   }
 
-
   if (!AQueueEmpty(&cv->waiting)) {
-	 // there is a process to wake up
-      l = AQueueFirst(&cv->waiting);
-      pcb = (PCB *)AQueueObject(l);
-      if ((AQueueRemove(&l) != QUEUE_SUCCESS)) {
-    		printf("FATAL ERROR: could not REMOVE link for LOCK QUEUE in CondSIGNAL!\n");
-    		exitsim();
-  	}
+    // there is a process to wake up
+    l = AQueueFirst(&cv->waiting);
+    pcb = (PCB *)AQueueObject(l);
+    if ((AQueueRemove(&l) != QUEUE_SUCCESS)) {
+      printf("FATAL ERROR: could not REMOVE link for LOCK QUEUE in CondSIGNAL!\n");
+      exitsim();
+    }
+    dbprintf('s', "CondSignal: Waking up PID %d.\n", (int)(GetPidFromAddress(pcb)));
+    ProcessWakeup(pcb);
+  }
 
-	  dbprintf('s', "CondSignal: Waking up PID %d.\n", (int)(GetPidFromAddress(pcb)));
-	ProcessWakeup(pcb);
-	}
-  
- 
   RestoreIntrs(intrval); // CHECK: where should interrupts go?
   return SYNC_SUCCESS; //RETURN 0?
 }
@@ -529,9 +525,7 @@ int CondHandleBroadcast(cond_t cond) {
   if (cond < 0) return SYNC_FAIL;
   if (cond >= MAX_CONDS) return SYNC_FAIL;
   if (!conds[cond].inuse) return SYNC_FAIL;
-  return CondWait(&conds[cond]);
-  // Q3: unfinished
-  return SYNC_SUCCESS;
+  return CondBroadcast(&conds[cond]);
 }
 
 int CondBroadcast(Cond *cv) {
