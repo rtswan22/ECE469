@@ -87,7 +87,7 @@ void main (int argc, char *argv[])
 
   // wait till processes complete
   if (sem_wait(sc->s_procs_completed) != SYNC_SUCCESS) {
-    Printf("Bad semaphore s_procs_completed (%d) in ", s_procs_completed); Printf(argv[0]); Printf("\n");
+    Printf("Bad semaphore s_procs_completed (%d) in ", sc->s_procs_completed); Printf(argv[0]); Printf("\n");
     Exit();
   }
   //Printf("%d, H2O\'s left over. %d H2\'s left over. %d O2\'s left over. %d SO2\'s left over. %d H2SO4's created.\n") // NEED

@@ -1,7 +1,7 @@
 #ifndef __USERPROG__
 #define __USERPROG__
 
-#define H20 0
+#define H2O 0
 #define SO4 1
 #define H2 2
 #define O2 3
