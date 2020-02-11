@@ -52,7 +52,7 @@ void main (int argc, char *argv[])
     circ->head = (circ->head + 1) % BUFFER_SIZE;
     Printf("Producer %d inserted: %c\n", getpid(), produced_item);
 
-    if(cond_signal(condc) != SYNC_SUCCESS) {
+    if(cond_signal(condc) != SYNC_SUCCESS) {// CHECK: should this be broadcast?
       Printf("Bad cond_signal for cond (%d) in ", lock); Printf(argv[0]); Printf(", exiting...\n");
       Exit();
     }

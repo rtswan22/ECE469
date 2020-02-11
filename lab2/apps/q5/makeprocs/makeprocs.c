@@ -10,6 +10,10 @@ void main (int argc, char *argv[])
   uint32 h_mem;
   char h_mem_str[10];
   int numprocs = 5;
+  int remain_H2O;
+  int remain_H2;
+  int remain_O2;
+  int remain_SO2;
  // print inputs
  //
  // H20 injection
@@ -90,5 +94,10 @@ void main (int argc, char *argv[])
     Printf("Bad semaphore s_procs_completed (%d) in ", sc->s_procs_completed); Printf(argv[0]); Printf("\n");
     Exit();
   }
-  //Printf("%d, H2O\'s left over. %d H2\'s left over. %d O2\'s left over. %d SO2\'s left over. %d H2SO4's created.\n") // NEED
+
+  remain_H2O = sc->inject_count[H2O] % 2;
+  remain_H2 = sc->react_count[R_2H2O]*2 - sc->react_count[R_H2_O2_SO2];
+  remain_O2 = sc->react_count[R_2H2O] + sc->react_count[R_SO4] - sc->react_count[R_H2_O2_SO2];
+  reamin_SO2 = sc->react_count[R_SO4] - sc->react_count[R_H2_O2_SO2];
+  Printf("%d, H2O\'s left over. %d H2\'s left over. %d O2\'s left over. %d SO2\'s left over. %d H2SO4's created.\n", reamin_H2O, remain_H2, reamin_O2, reamin_SO2, sc->react_count[R_H2_O2_SO2]); // CHECK
 }

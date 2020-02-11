@@ -49,7 +49,7 @@ void main (int argc, char *argv[])
     Printf("Consumer %d removed: %c\n", getpid(), circ->item[circ->tail]);
     circ->tail = (circ->tail + 1) % BUFFER_SIZE;
 
-    if(cond_signal(condp) != SYNC_SUCCESS) {
+    if(cond_signal(condp) != SYNC_SUCCESS) {// CHECK: should this be broadcast?
       Printf("Bad cond_signal for cond (%d) in ", lock); Printf(argv[0]); Printf(", exiting...\n");
       Exit();
     }
