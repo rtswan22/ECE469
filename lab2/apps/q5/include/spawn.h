@@ -1,37 +1,31 @@
 #ifndef __USERPROG__
 #define __USERPROG__
 
-/* typedef struct missile_code {
-  int numprocs;
-  char really_important_char;
-} missile_code; */
+#define H20 0
+#define SO4 1
+#define H2 2
+#define O2 3
+#define SO2 4
+#define H2SO4 5
+#define MOLECULE_TYPES 6
+#define INJECTION_TYPES 2
 
-#define BUFFER_SIZE 10 
+#define R_2H2O 0
+#define R_SO4 1
+#define R_H2_O2_SO2 2
+#define REACTION_TYPES 3
 
-typedef struct buffer {
-  int head;
-  int tail;
-  char item[BUFFER_SIZE];  //NOTE: size is arbitrary
-} buffer;
+typedef struct sems_and_counts {
+  sem_t s_procs_completed;
+  sem_t molecules[MOLECULE_TYPES];
+  int inject_count[INJECTION_TYPES];
+  int react_count[REACTION_TYPES];
+} sems_and_counts;
 
-//insert code
-/*
-char produced_item; //ASSIGN TO CHAR IN STRING
-if((circ_buff->head + 1) % BUFFER_SIZE != tail){ // if not full
-  circ_buff->item[circ_buff->head] = produced_item;
-  circ_buff->head = (circ_buff->head + 1) % BUFFER_SIZE;
-}
-*/
-//remove code
-/*
-char consumed_item;
-if(circ_buff->head != circ_buff->tail) { // if not empty
-  consumed_item = circ_buff->item[circ_buff->tail];
-  circ_buff->tail = (circ_buff->tail + 1) % BUFFER_SIZE;
-}
-*/
-
-#define PRODUCER_TO_RUN "producer.dlx.obj"
-#define CONSUMER_TO_RUN "consumer.dlx.obj"
+#define INJECT_H2O "inject_H2O.dlx.obj"
+#define INJECT_SO4 "inject_SO4.dlx.obj"
+#define REACT_2H2O "react_2H2O.dlx.obj"
+#define REACT_SO4 "react_SO4.dlx.obj"
+#define REACT_H2_O2_SO2 "react_H2_O2_SO2.dlx.obj"
 
 #endif
