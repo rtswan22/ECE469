@@ -76,7 +76,7 @@ void main (int argc, char *argv[])
   sc->react_count[R_2H2O] = sc->inject_count[H2O]/2;
   sc->react_count[R_SO4] = sc->inject_count[SO4];
   sc->react_count[R_H2_O2_SO2] = (sc->react_count[R_2H2O]*2)<sc->react_count[R_SO4] ? 2*sc->react_count[R_2H2O] : sc->react_count[R_SO4];
-
+  //Printf("%d\n", sc->react_count[R_H2_O2_SO2]);
   Printf("Creating %d H2Os and %d SO4s.\n", sc->inject_count[H2O], sc->inject_count[SO4]);
 
   // Setup the command-line arguments
@@ -98,6 +98,7 @@ void main (int argc, char *argv[])
   remain_H2O = sc->inject_count[H2O] % 2;
   remain_H2 = sc->react_count[R_2H2O]*2 - sc->react_count[R_H2_O2_SO2];
   remain_O2 = sc->react_count[R_2H2O] + sc->react_count[R_SO4] - sc->react_count[R_H2_O2_SO2];
-  reamin_SO2 = sc->react_count[R_SO4] - sc->react_count[R_H2_O2_SO2];
-  Printf("%d, H2O\'s left over. %d H2\'s left over. %d O2\'s left over. %d SO2\'s left over. %d H2SO4's created.\n", reamin_H2O, remain_H2, reamin_O2, reamin_SO2, sc->react_count[R_H2_O2_SO2]); // CHECK
+  remain_SO2 = sc->react_count[R_SO4] - sc->react_count[R_H2_O2_SO2];
+  Printf("%d H2O\'s left over. %d H2\'s left over. %d O2\'s left over. %d SO2\'s left over.", remain_H2O, remain_H2, remain_O2, remain_SO2);
+  Printf(" %d H2SO4\'s created.\n",  sc->react_count[R_H2_O2_SO2]); // CHECK
 }
