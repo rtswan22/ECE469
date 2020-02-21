@@ -86,8 +86,28 @@ mbox_t MboxCreate() {
 //
 //-------------------------------------------------------
 int MboxOpen(mbox_t handle) {
-  return MBOX_FAIL;
-}
+  //get pid
+  int pid = GetCurrentPid();
+
+  //use lock
+  if(LockHandleAcquire(mboxes[handle].lock == SYNC_FAILURE)
+    {
+      printf("Mbox Open successfully acquire the lock\n");
+      return MBOX_FAIL;
+      
+    }
+
+    //add to proc list
+    mboxes[handle].procs[pid] = 1;
+    //release lock
+     if(LockHandleRelease(mboxes[handle].lock == SYNC_FAILURE)
+    {
+      printf("Mbox Open successfully release the lock\n");
+      return MBOX_FAIL;
+    }
+    
+       return MBOX_SUCCESS;
+  
 
 //-------------------------------------------------------
 //
@@ -103,7 +123,46 @@ int MboxOpen(mbox_t handle) {
 //
 //-------------------------------------------------------
 int MboxClose(mbox_t handle) {
-  return MBOX_FAIL;
+  
+  //get pid
+  int pid = GetCurrentPid();
+  //counter variable
+  int numprocs
+  //use lock
+  if(LockHandleAcquire(mboxes[handle].lock == SYNC_FAILURE)
+    {
+      printf("Mbox Close successfully acquire the lock\n");
+      return MBOX_FAIL;
+      
+    }
+
+    //remove from proc list
+    mboxes[handle].procs[pid] = 0;
+
+    //checking to see if anyone else using the pid
+    for(pid = 0; pid < PROCESS_MAX_PROCS; pid++)
+      {
+	if(mboxes[handle].procs[pid] == 1)
+	  numprocs++;
+      }
+
+    //no other process using it
+  if(numprocs == 0)
+    {   
+      mboxes[handle].inuse = 0; 
+      //reinitialize queue
+      AQueueInit(&(mboxes[handle].msg_queue));   
+  }
+
+    //release lock
+     if(LockHandleRelease(mboxes[handle].lock == SYNC_FAILURE)
+    {
+      printf("Mbox Close successfully release the lock\n");
+      return MBOX_FAIL;
+    }
+    
+       return MBOX_SUCCESS;
+
 }
 
 //-------------------------------------------------------
