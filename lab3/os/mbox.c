@@ -218,5 +218,38 @@ int MboxRecv(mbox_t handle, int maxlength, void* message) {
 //
 //--------------------------------------------------------------------------------
 int MboxCloseAllByPid(int pid) {
-  return MBOX_FAIL;
+int i; 
+int j;
+int numprocs;
+
+//loops through all mboxes.
+//if pid opened it-> remove from list
+//if not mark not in use. 
+  for (i = 0; i < MBOX_NUM_MBOXES; i++) {
+    //use lock
+    if(LockHandleAcquire(mboxes[i].lock) == SYNC_FAIL) {
+      printf("Mbox Close All By Pid did not successfully acquire the lock\n");
+      return MBOX_FAIL;
+    }
+
+    numprocs = 0;
+    if(mboxes[i].procs[pid] == 1) {
+      mboxes[i].procs[pid] = 0;
+
+      for(j = 0; j < PROCESS_MAX_PROCS; j++) {
+        if(mboxes[i].procs[j] == 1) {
+          numprocs++;
+        }
+      }
+      if(numprocs == 0) { mboxes[i].inuse = 0 };
+
+    }
+    //release lock
+    if(LockHandleRelease(mboxes[handle].lock == SYNC_FAIL) {
+      printf("Mbox Close All By Pid did not successfully release the lock\n");
+      return MBOX_FAIL;
+    }
+  }
+
+  return MBOX_SUCCESS;
 }
