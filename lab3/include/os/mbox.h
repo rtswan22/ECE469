@@ -14,7 +14,7 @@
 //--------------------------------------------
 
 typedef struct mbox_message {
-  uint32 procs[PROCESS_MAX_PROCS];
+  char buffer[MBOX_MAX_MESSAGE_LENGTH]; // CHECK char?
   uint32 length;
   uint32 inuse;
 } mbox_message;

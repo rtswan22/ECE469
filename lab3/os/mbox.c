@@ -55,14 +55,14 @@ mbox_t MboxCreate() {
   if(mbx==MBOX_NUM_MBOXES) { return MBOX_FAIL; }
 
   mbx_init = &mboxes[mbx];
-  if((mbx_init->lock = LockCreate()) != SYNC_SUCCES) { return MBOX_FAIL; }
-  if((mbx_init->notfull = CondCreate(mbx_init->lock)) != SYNC_SUCCESS) { return MBOX_FAIL; }
-  if((mbx_init->notempty = CondCreate(mbx_init->lock)) != SYNC_SUCCESS) { return MBOX_FAIL; }
-  if(AQueueInit(&mbx_init->msg_queue) != QUEUE_SUCCESS) {
+  if((mbx_init->lock = LockCreate()) != SYNC_SUCCES) { return MBOX_FAIL; } // lock
+  if((mbx_init->notfull = CondCreate(mbx_init->lock)) != SYNC_SUCCESS) { return MBOX_FAIL; } // notfull
+  if((mbx_init->notempty = CondCreate(mbx_init->lock)) != SYNC_SUCCESS) { return MBOX_FAIL; } // notempty
+  if(AQueueInit(&mbx_init->msg_queue) != QUEUE_SUCCESS) { // message queue
     printf("FATAL ERROR: could not initialize mbox_message waiting queue in MboxCreate!\n");
     exitsim();
   }
-  for(i=0; i<PROCESS_MAX_PROCS; i++) {
+  for(i=0; i<PROCESS_MAX_PROCS; i++) { // has it been opened
     if(mbx_init->procs[i] != 0) {
       return MBOX_FAIL;
     }
@@ -86,29 +86,22 @@ mbox_t MboxCreate() {
 //
 //-------------------------------------------------------
 int MboxOpen(mbox_t handle) {
-  //get pid
-  int pid = GetCurrentPid();
+  int pid = GetCurrentPid(); //get pid
 
-  //use lock
-  if(LockHandleAcquire(mboxes[handle].lock == SYNC_FAILURE)
-    {
-      printf("Mbox Open successfully acquire the lock\n");
-      return MBOX_FAIL;
-      
-    }
+  if(LockHandleAcquire(mboxes[handle].lock) == SYNC_FAIL) { //use lock
+    printf("MboxOpen could not acquire the lock\n");
+    exitsim(); // CHECK return MBOX_FAIL;
+  }
 
-    //add to proc list
-    mboxes[handle].procs[pid] = 1;
-    //release lock
-     if(LockHandleRelease(mboxes[handle].lock == SYNC_FAILURE)
-    {
-      printf("Mbox Open successfully release the lock\n");
-      return MBOX_FAIL;
-    }
-    
-       return MBOX_SUCCESS;
+  mboxes[handle].procs[pid] = 1; //add to proc list
+ 
+  if(LockHandleRelease(mboxes[handle].lock) == SYNC_FAIL) { //release lock
+    printf("MboxOpen could not release the lock\n");
+    exitsim(); // CHECK return MBOX_FAIL;
+  }
   
-
+  return MBOX_SUCCESS;
+}
 //-------------------------------------------------------
 //
 // int MboxClose(mbox_t);
@@ -124,45 +117,31 @@ int MboxOpen(mbox_t handle) {
 //-------------------------------------------------------
 int MboxClose(mbox_t handle) {
   
-  //get pid
-  int pid = GetCurrentPid();
-  //counter variable
-  int numprocs
-  //use lock
-  if(LockHandleAcquire(mboxes[handle].lock == SYNC_FAILURE)
-    {
-      printf("Mbox Close successfully acquire the lock\n");
-      return MBOX_FAIL;
-      
-    }
+  int pid = GetCurrentPid(); //get pid 
+  int numprocs; //counter variable
 
-    //remove from proc list
-    mboxes[handle].procs[pid] = 0;
-
-    //checking to see if anyone else using the pid
-    for(pid = 0; pid < PROCESS_MAX_PROCS; pid++)
-      {
-	if(mboxes[handle].procs[pid] == 1)
-	  numprocs++;
-      }
-
-    //no other process using it
-  if(numprocs == 0)
-    {   
-      mboxes[handle].inuse = 0; 
-      //reinitialize queue
-      AQueueInit(&(mboxes[handle].msg_queue));   
+  if(LockHandleAcquire(mboxes[handle].lock) == SYNC_FAIL) { //use lock
+    printf("MboxClose could not acquire the lock\n");
+    return MBOX_FAIL; // CHECK exit
   }
 
-    //release lock
-     if(LockHandleRelease(mboxes[handle].lock == SYNC_FAILURE)
-    {
-      printf("Mbox Close successfully release the lock\n");
-      return MBOX_FAIL;
-    }
-    
-       return MBOX_SUCCESS;
+  mboxes[handle].procs[pid] = 0; //remove from proc list
 
+  for(pid = 0; pid < PROCESS_MAX_PROCS; pid++) { //checking to see if anyone else using the pid
+    if(mboxes[handle].procs[pid] == 1) { numprocs++; }
+  }
+
+  if(numprocs == 0) { //no other process using it 
+    mboxes[handle].inuse = 0; 
+    AQueueInit(&(mboxes[handle].msg_queue)); //CHECK: reinitialize queue, ProcessFreeResources?
+  }
+
+  if(LockHandleRelease(mboxes[handle].lock) == SYNC_FAIL) { //release lock
+    printf("MboxClose failed to release the lock\n");
+    return MBOX_FAIL; // CHECK exit
+  }
+    
+  return MBOX_SUCCESS;
 }
 
 //-------------------------------------------------------
@@ -182,7 +161,56 @@ int MboxClose(mbox_t handle) {
 //
 //-------------------------------------------------------
 int MboxSend(mbox_t handle, int length, void* message) {
-  return MBOX_FAIL;
+  uint32 pid = GetCurrentPid();
+  uint32 intrval;
+  int mbox_msg;
+
+  if(mboxes[handle].procs[pid] != 1) { // does the process have the mbox open
+    printf("MboxSend: failed, PID %d does not have mailbox %d open\n", pid, handle);
+    return MBOX_FAIL; // CHECK exit
+  }
+
+  if(LockHandleAcquire(mboxes[handle].lock) == SYNC_FAIL) { //use lock
+    printf("MboxSend: could not acquire the lock\n");
+    return MBOX_FAIL; // CHECK exit
+  }
+
+  while(AQueueLength(&mboxes[handle].msg_queue) >= MBOX_MAX_BUFFERS_PER_BOX) {
+    if(CondHandleWait(mboxes[handle].notfull) != SYNC_SUCCESS) { // wait for notfull
+      printf("MboxSend: bad CondHandleWait() for mbox %d in PID %d\n", handle, pid);
+      return MBOX_FAIL; // CHECK exit
+    }
+  }
+
+  intrval = DisableIntrs();
+  for(mbox_msg=0; mbox_msg<MBOX_NUM_BUFFERS; mbox_msg++) {
+    if(mbox_messages[mbox_msg].inuse == 0) {
+      mbox_messages[mbox_msg].inuse = 1;
+      break;
+    }
+  }
+  RestoreIntrs(intrval)
+
+  mbox_messages[mbox_msg].length = length;
+  bcopy(message, (void*)mbox_messages[mbox_msg].buffer, length); // CHECK
+
+  intrval = DisableIntrs(); // CHECK
+  if ((l = AQueueAllocLink ((void *)&mbox_messages[mbox_msg])) == NULL) { // CHECK curretPCB previously
+    printf("FATAL ERROR: could not allocate link for message queue in MboxSend!\n");
+    return MBOX_FAIL;
+  }
+  if (AQueueInsertLast (&mboxes[handle].msg_queue, l) != QUEUE_SUCCESS) {
+    printf("FATAL ERROR: could not insert new link into message waiting queue in MboxSend!\n");
+    return MBOX_FAIL;
+  }
+  RestoreIntrs(intrval); // CHECK
+
+  if(CondHandleSignal(mboxes[handle].notempty) == SYNC_FAIL) {
+    printf("MboxSend: bad CondHandleSignal for mbox %d in PID %d\n", handle, pid);
+    return MBOX_FAIL; // CHECK exit
+  }
+
+  return MBOX_SUCCESS;
 }
 
 //-------------------------------------------------------
@@ -202,7 +230,55 @@ int MboxSend(mbox_t handle, int length, void* message) {
 //
 //-------------------------------------------------------
 int MboxRecv(mbox_t handle, int maxlength, void* message) {
-  return MBOX_FAIL;
+  uint32 pid = GetCurrentPid();
+  uint32 intrval;
+  Link* l;
+  mbox_message* msg_recv;
+  int recv_length
+
+  if(mboxes[handle].procs[pid] != 1) { // does the process have the mbox open
+    printf("MboxRecv: failed, PID %d does not have mailbox %d open\n", pid, handle);
+    return MBOX_FAIL; // CHECK exit
+  }
+
+  if(LockHandleAcquire(mboxes[handle].lock) == SYNC_FAIL) { //use lock
+    printf("MboxRecv: could not acquire the lock\n");
+    return MBOX_FAIL; // CHECK exit
+  }
+
+  while(AQueueEmpty(&mboxes[handle].msg_queue)) {
+    if(CondHandleWait(mboxes[handle].notempty) != SYNC_SUCCESS) { // wait for notempty
+      printf("MboxRecv: bad CondHandleWait() for mbox %d in PID %d\n", handle, pid);
+      return MBOX_FAIL; // CHECK exit
+    }
+  }
+
+  intrval = DisableIntrs(); // CHECK
+  l = AQueueFirst(&mboxes[handle].msg_queue);
+  msg_recv = (mbox_message*)AQueueObject(l);
+  if((AQueueRemove(&l) != QUEUE_SUCCESS)) {
+    printf("MboxRecv: could not AQueueRemove link\n");
+    return MBOX_FAIL;
+  }
+  RestoreIntrs(intrval); // CHECK
+
+  if(msg_recv->length > maxlength) {
+    printf("MboxRecv: message too long\n");
+    msg_recv->inuse = 0; // CHECK
+    return MBOX_FAIL;
+  }
+
+  bcopy((void*)msg_recv->buffer, message, msg_recv->length);
+
+  recv_length = msg_recv->length;
+  msg_recv->inuse = 0; // CHECK
+
+  if(CondHandleSignal(mboxes[handle].notfull) == SYNC_FAIL) {
+    printf("MboxRecv: bad CondHandleSignal for mbox %d in PID %d\n", handle, pid);
+    return MBOX_FAIL; // CHECK exit
+  }
+
+  return recv_length;
 }
 
 //--------------------------------------------------------------------------------
