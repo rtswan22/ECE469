@@ -321,7 +321,7 @@ int numprocs;
 
     }
     //release lock
-    if(LockHandleRelease(mboxes[handle].lock == SYNC_FAIL) {
+    if(LockHandleRelease(mboxes[i].lock) == SYNC_FAIL) {
       printf("Mbox Close All By Pid did not successfully release the lock\n");
       return MBOX_FAIL;
     }
