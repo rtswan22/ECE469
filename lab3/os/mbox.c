@@ -119,6 +119,7 @@ int MboxClose(mbox_t handle) {
   
   int pid = GetCurrentPid(); //get pid 
   int numprocs; //counter variable
+  Link* l;
 
   if(LockHandleAcquire(mboxes[handle].lock) == SYNC_FAIL) { //use lock
     printf("MboxClose could not acquire the lock\n");
@@ -132,8 +133,15 @@ int MboxClose(mbox_t handle) {
   }
 
   if(numprocs == 0) { //no other process using it 
+    //AQueueInit(&(mboxes[handle].msg_queue)); //NOT: need to remove links from mailbox instead
+    while(AQueueEmpty(&mboxes[handle].msg_queue) != 0){ //CHECK
+      l = AQueueFirst(&mboxes[handle].msg_queue);
+      if((AQueueRemove(&l) != QUEUE_SUCCESS)) {
+        printf("MboxClose: could not AQueueRemove link\n");
+        return MBOX_FAIL;
+      }
+    }
     mboxes[handle].inuse = 0; 
-    AQueueInit(&(mboxes[handle].msg_queue)); //NOT: need to remove links from mailbox instead
   }
 
   if(LockHandleRelease(mboxes[handle].lock) == SYNC_FAIL) { //release lock
@@ -290,9 +298,10 @@ int MboxRecv(mbox_t handle, int maxlength, void* message) {
 //
 //--------------------------------------------------------------------------------
 int MboxCloseAllByPid(int pid) {
-int i; 
-int j;
-int numprocs;
+  int i; 
+  int j;
+  int numprocs;
+  Link* l;
 
 //loops through all mboxes.
 //if pid opened it-> remove from list
@@ -313,7 +322,16 @@ int numprocs;
           numprocs++;
         }
       }
-      if(numprocs == 0) { mboxes[i].inuse = 0 };
+      if(numprocs == 0) {
+        while(AQueueEmpty(&mboxes[i].msg_queue) != 0){ //CHECK: yes or no?
+          l = AQueueFirst(&mboxes[i].msg_queue);
+          if((AQueueRemove(&l) != QUEUE_SUCCESS)) {
+            printf("MboxClose: could not AQueueRemove link\n");
+            return MBOX_FAIL;
+          }
+        }
+        mboxes[i].inuse = 0;
+      }
 
     }
     //release lock
