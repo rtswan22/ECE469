@@ -5,11 +5,12 @@
 #include "spawn.h"
 void main (int argc, char *argv[]) 
 {
-
+        sem_t procs;
 	mbox_t mbox_s2;
 
 	mbox_s2 = dstrtol(argv[1], NULL, 10);
-
+	s_procs_completed = dstrtol(argv[2], NULL, 10);
+	
 	if(mbox_open(mbox_s2) != MBOX_SUCCESS) {
 		Printf("Injection S2 (%d): could not open mbox\n", getpid());
 		Exit();
@@ -28,5 +29,10 @@ void main (int argc, char *argv[])
 		Exit();
 	}
 
+
+        if(sem_signal(s_procs_completed) != SYNC_SUCCESS) {
+		Printf("Bad semaphore s_procs_completed (%d) in ", s_procs_completed); Printf(argv[0]); Printf(", exiting...\n");
+		Exit();
+	}
 	
 }

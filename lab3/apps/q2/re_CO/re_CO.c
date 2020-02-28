@@ -13,6 +13,11 @@ void main (int argc, char *argv[])
         
 	mbox_co = dstrtol(argv[1], NULL, 10);
 	mbox_o2 = dstrtol(argv[2], NULL, 10);
+	
+	if (argc != 3) { 
+    Printf("Usage: "); Printf(argv[0]); Printf(" <handle_to_page_mapped_semaphore> <CO_mbox>\n"); 
+    Exit();
+    }
 	//Open Mbox Co
 	if(mbox_open(mbox_co) != MBOX_SUCCESS) {
 		Printf("Reaction CO (%d): could not open mbox\n", getpid());
@@ -72,5 +77,8 @@ void main (int argc, char *argv[])
 		Exit();
 	}
 
-	
+	if(sem_signal(s_procs_completed) != SYNC_SUCCESS) {
+    Printf("Bad semaphore s_procs_completed (%d) in ", s_procs_completed); Printf(argv[0]); Printf(", exiting...\n");
+    Exit();
+  }
 }
