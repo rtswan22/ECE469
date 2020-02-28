@@ -1,0 +1,33 @@
+#include "usertraps.h"
+#include "misc.h"
+
+#include "spawn.h"
+
+void main (int argc, char *argv[]) 
+{
+
+	mbox_t mbox;
+
+	s_procs_completed = dstrtol(argv[2], NULL, 10); 	// The "10" means base 10
+	mbox_co = dstrtol(argv[1], NULL, 10);
+
+	if(mbox_open(mbox) != MBOX_SUCCESS) {
+		Printf("Injection CO (%d): could not open mbox\n", getpid());
+		Exit();
+	}
+
+	// Inject 1 CO
+	if(mbox_send(mbox, 2, (void *)"CO") != MBOX_SUCCESS) {
+		Printf("Injection CO (%d): could not send\n", getpid());
+		Exit();
+	}
+
+	Printf("PID: %d Created a CO molecule.\n", getpid());
+
+	if(mbox_close(mbox) != MBOX_SUCCESS) {
+		Printf("Injection CO (%d): could not close mbox\n", getpid());
+		Exit();
+	}
+
+       
+}

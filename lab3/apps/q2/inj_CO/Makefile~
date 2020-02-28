@@ -1,0 +1,6 @@
+SRCS=inj_co.c
+EXEC=inj_co.dlx.obj
+
+include ../Makerules
+
+include $(APPROOT)/Makerules
