@@ -6,8 +6,8 @@
 # this way because the build procedure for all apps is basically the same.
 
 
-SRCS=re_CO.c
-EXEC=re_CO.dlx.obj
+SRCS=inj_S2.c
+EXEC=inj_S2.dlx.obj
 
 include ../Makerules
 

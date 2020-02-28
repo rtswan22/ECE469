@@ -1,5 +1,6 @@
 #include "usertraps.h"
 #include "misc.h"
+#include "queue.h"
 
 #include "spawn.h"
 
@@ -7,8 +8,10 @@ void main (int argc, char *argv[])
 {
 
 	mbox_t mbox;
+	mbox = dstrtol(argv[1], NULL, 10);
+	
 
-	mbox_co = dstrtol(argv[1], NULL, 10);
+
 	//Open Mailbox
 	if(mbox_open(mbox) != MBOX_SUCCESS) {
 		Printf("Injection CO (%d): could not open mbox\n", getpid());
