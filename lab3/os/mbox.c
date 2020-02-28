@@ -24,7 +24,7 @@ static mbox_message mbox_messages[MBOX_NUM_BUFFERS];
 void MboxModuleInit() {
   int i;
   dbprintf('p', "MboxModuleInit: Entering MboxModuleInit\n");
-  for(i=0; i<MBOX_NUM_BOXES; i++) { mboxes[i].inuse = 0; }
+  for(i=0; i<MBOX_NUM_MBOXES; i++) { mboxes[i].inuse = 0; }
   for(i=0; i<MBOX_NUM_BUFFERS; i++) { mbox_messages[i].inuse = 0; }
 }
 
@@ -52,18 +52,31 @@ mbox_t MboxCreate() {
     }
   }
   RestoreIntrs(intrval);
-  if(mbx==MBOX_NUM_MBOXES) { return MBOX_FAIL; }
+  if(mbx==MBOX_NUM_MBOXES) {
+    printf("MboxCreate: No available mailbox\n");
+    return MBOX_FAIL;
+  }
 
   mbx_init = &mboxes[mbx];
-  if((mbx_init->lock = LockCreate()) != SYNC_SUCCES) { return MBOX_FAIL; } // lock
-  if((mbx_init->notfull = CondCreate(mbx_init->lock)) != SYNC_SUCCESS) { return MBOX_FAIL; } // notfull
-  if((mbx_init->notempty = CondCreate(mbx_init->lock)) != SYNC_SUCCESS) { return MBOX_FAIL; } // notempty
+  if((mbx_init->lock = LockCreate()) == SYNC_FAIL) { //lock
+    printf("MboxCreate: could not LockCreate\n");
+    return MBOX_FAIL;
+  }
+  if((mbx_init->not_full = CondCreate(mbx_init->lock)) == SYNC_FAIL) { // notfull
+    printf("MboxCreate: could not CondCreate-not_full\n");
+    return MBOX_FAIL;
+  }
+  if((mbx_init->not_empty = CondCreate(mbx_init->lock)) == SYNC_FAIL) { // notempty
+    printf("MboxCreate: could not CondCreate-not_empty\n");
+    return MBOX_FAIL;
+  }
   if(AQueueInit(&mbx_init->msg_queue) != QUEUE_SUCCESS) { // message queue
     printf("FATAL ERROR: could not initialize mbox_message waiting queue in MboxCreate!\n");
     exitsim();
   }
   for(i=0; i<PROCESS_MAX_PROCS; i++) { // has it been opened
     if(mbx_init->procs[i] != 0) {
+      printf("MboxCreate: error mbox was open\n");
       return MBOX_FAIL;
     }
   }
@@ -172,6 +185,7 @@ int MboxSend(mbox_t handle, int length, void* message) {
   uint32 pid = GetCurrentPid();
   uint32 intrval;
   int mbox_msg;
+  Link* l;
 
   if(mboxes[handle].procs[pid] != 1) { // does the process have the mbox open
     printf("MboxSend: failed, PID %d does not have mailbox %d open\n", pid, handle);
@@ -183,8 +197,8 @@ int MboxSend(mbox_t handle, int length, void* message) {
     return MBOX_FAIL;
   }
 
-  while(AQueueLength(&mboxes[handle].msg_queue) >= MBOX_MAX_BUFFERS_PER_BOX) {
-    if(CondHandleWait(mboxes[handle].notfull) != SYNC_SUCCESS) { // wait for notfull
+  while(AQueueLength(&mboxes[handle].msg_queue) >= MBOX_MAX_BUFFERS_PER_MBOX) {
+    if(CondHandleWait(mboxes[handle].not_full) != SYNC_SUCCESS) { // wait for notfull
       printf("MboxSend: bad CondHandleWait() for mbox %d in PID %d\n", handle, pid);
       return MBOX_FAIL;
     }
@@ -197,7 +211,7 @@ int MboxSend(mbox_t handle, int length, void* message) {
       break;
     }
   }
-  RestoreIntrs(intrval)
+  RestoreIntrs(intrval);
 
   mbox_messages[mbox_msg].length = length;
   bcopy(message, (void*)mbox_messages[mbox_msg].buffer, length); // CHECK
@@ -211,8 +225,13 @@ int MboxSend(mbox_t handle, int length, void* message) {
     return MBOX_FAIL;
   }
 
-  if(CondHandleSignal(mboxes[handle].notempty) == SYNC_FAIL) {
+  if(CondHandleSignal(mboxes[handle].not_empty) == SYNC_FAIL) {
     printf("MboxSend: bad CondHandleSignal for mbox %d in PID %d\n", handle, pid);
+    return MBOX_FAIL;
+  }
+
+  if(LockHandleRelease(mboxes[handle].lock) == SYNC_FAIL) { //release lock
+    printf("MboxSend failed to release the lock\n");
     return MBOX_FAIL;
   }
 
@@ -237,10 +256,9 @@ int MboxSend(mbox_t handle, int length, void* message) {
 //-------------------------------------------------------
 int MboxRecv(mbox_t handle, int maxlength, void* message) {
   uint32 pid = GetCurrentPid();
-  uint32 intrval;
   Link* l;
   mbox_message* msg_recv;
-  int recv_length
+  int recv_length;
 
   if(mboxes[handle].procs[pid] != 1) { // does the process have the mbox open
     printf("MboxRecv: failed, PID %d does not have mailbox %d open\n", pid, handle);
@@ -253,7 +271,8 @@ int MboxRecv(mbox_t handle, int maxlength, void* message) {
   }
 
   while(AQueueEmpty(&mboxes[handle].msg_queue)) {
-    if(CondHandleWait(mboxes[handle].notempty) != SYNC_SUCCESS) { // wait for notempty
+    //printf("MboxRecv: waiting for not_empty\n"); // NOT
+    if(CondHandleWait(mboxes[handle].not_empty) != SYNC_SUCCESS) { // wait for notempty
       printf("MboxRecv: bad CondHandleWait() for mbox %d in PID %d\n", handle, pid);
       return MBOX_FAIL;
     }
@@ -277,8 +296,13 @@ int MboxRecv(mbox_t handle, int maxlength, void* message) {
   recv_length = msg_recv->length;
   msg_recv->inuse = 0; // CHECK
 
-  if(CondHandleSignal(mboxes[handle].notfull) == SYNC_FAIL) {
+  if(CondHandleSignal(mboxes[handle].not_full) == SYNC_FAIL) {
     printf("MboxRecv: bad CondHandleSignal for mbox %d in PID %d\n", handle, pid);
+    return MBOX_FAIL;
+  }
+
+  if(LockHandleRelease(mboxes[handle].lock) == SYNC_FAIL) { //release lock
+    printf("MboxRecv failed to release the lock\n");
     return MBOX_FAIL;
   }
 
