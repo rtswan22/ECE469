@@ -7,97 +7,160 @@ void main (int argc, char *argv[])
 {
   int n_inj_S2 = 0;
   int n_inj_CO = 0;
+  int n_re_S2 = 0;
+  int n_re_CO = 0;
+  int n_re_SO4 = 0;
   int i; // Loop index variable
-  mol_boxes molecules;
+  mol_boxes* molecules;
   sem_t s_procs_completed;
-  char h_mbox_str[10];
+  int h_mem; //CHECK
+  char h_mem_str[10];
   char s_procs_completed_str[10];
 
   // ARGUMENTS
   if (argc != 3) {
-    Printf("Usage: %s <number of processes to create\n", argv[0]);
+    Printf("Usage: %s <number of S2 injects> <number of CO injects>\n", argv[0]);
     Exit();
   }
   n_inj_S2 = dstrtol(argv[1], NULL, 10);
   n_inj_CO = dstrtol(argv[2], NULL, 10);
-  Printf("makeprocs (%d): Creating %d processes\n", getpid(), n_inj_S2+n_inj_CO);
+  Printf("Creating %d S2s and %d COs.\n", n_inj_S2, n_inj_CO);
+
+  // SHARED MEMORY
+  if ((h_mem = shmget()) == 0) {
+    Printf("ERROR: could not allocate shared memory page in "); Printf(argv[0]); Printf(", exiting...\n");
+    Exit();
+  }
+  if ((molecules = (mol_boxes*)shmat(h_mem)) == NULL) {
+    Printf("Could not shmat(handle) in "); Printf(argv[0]); Printf(", exiting..\n");
+    Exit();
+  }
 
   // MBOX CREATION
-  if((molecules.mbox_S2 = mbox_create()) == MBOX_FAIL) {
+  if((molecules->mbox_S2 = mbox_create()) == MBOX_FAIL) {
     Printf("makeprocs (%d): ERROR: could not allocate mbox_S2!", getpid());
     Exit();
   }
-  if((molecules.mbox_S = mbox_create()) == MBOX_FAIL) {
+  if((molecules->mbox_S = mbox_create()) == MBOX_FAIL) {
     Printf("makeprocs (%d): ERROR: could not allocate mbox_S!", getpid());
     Exit();
   }
-  if((molecules.mbox_CO = mbox_create()) == MBOX_FAIL) {
+  if((molecules->mbox_CO = mbox_create()) == MBOX_FAIL) {
     Printf("makeprocs (%d): ERROR: could not allocate mbox_CO!", getpid());
     Exit();
   }
-  if((molecules.mbox_O2 = mbox_create()) == MBOX_FAIL) {
+  if((molecules->mbox_O2 = mbox_create()) == MBOX_FAIL) {
     Printf("makeprocs (%d): ERROR: could not allocate mbox_O2!", getpid());
     Exit();
   }
-  if((molecules.mbox_C2 = mbox_create()) == MBOX_FAIL) {
+  if((molecules->mbox_C2 = mbox_create()) == MBOX_FAIL) {
     Printf("makeprocs (%d): ERROR: could not allocate mbox_C2!", getpid());
     Exit();
   }
-  if((molecules.mbox_SO4 = mbox_create()) == MBOX_FAIL) {
+  if((molecules->mbox_SO4 = mbox_create()) == MBOX_FAIL) {
     Printf("makeprocs (%d): ERROR: could not allocate mbox_SO4!", getpid());
     Exit();
   }
 
   // Open mailbox to prevent deallocation
-  if(mbox_open(mbox_S2) == MBOX_FAIL) {
-    Printf("makeprocs (%d): Could not open mailbox %d!\n", getpid(), mbox_S2);
+  if(mbox_open(molecules->mbox_S2) == MBOX_FAIL) {
+    Printf("makeprocs (%d): Could not open mailbox %d!\n", getpid(), molecules->mbox_S2);
     Exit();
   }
-  if(mbox_open(mbox_S) == MBOX_FAIL) {
-    Printf("makeprocs (%d): Could not open mailbox %d!\n", getpid(), mbox_S);
+  if(mbox_open(molecules->mbox_S) == MBOX_FAIL) {
+    Printf("makeprocs (%d): Could not open mailbox %d!\n", getpid(), molecules->mbox_S);
     Exit();
   }
-  if(mbox_open(mbox_CO) == MBOX_FAIL) {
-    Printf("makeprocs (%d): Could not open mailbox %d!\n", getpid(), mbox_CO);
+  if(mbox_open(molecules->mbox_CO) == MBOX_FAIL) {
+    Printf("makeprocs (%d): Could not open mailbox %d!\n", getpid(), molecules->mbox_CO);
     Exit();
   }
-  if(mbox_open(mbox_O2) == MBOX_FAIL) {
-    Printf("makeprocs (%d): Could not open mailbox %d!\n", getpid(), mbox_O2);
+  if(mbox_open(molecules->mbox_O2) == MBOX_FAIL) {
+    Printf("makeprocs (%d): Could not open mailbox %d!\n", getpid(), molecules->mbox_O2);
     Exit();
   }
-  if(mbox_open(mbox_C2) == MBOX_FAIL) {
-    Printf("makeprocs (%d): Could not open mailbox %d!\n", getpid(), mbox_C2);
+  if(mbox_open(molecules->mbox_C2) == MBOX_FAIL) {
+    Printf("makeprocs (%d): Could not open mailbox %d!\n", getpid(), molecules->mbox_C2);
     Exit();
   }
-  if(mbox_open(mbox_SO4) == MBOX_FAIL) {
-    Printf("makeprocs (%d): Could not open mailbox %d!\n", getpid(), mbox_SO4);
+  if(mbox_open(molecules->mbox_SO4) == MBOX_FAIL) {
+    Printf("makeprocs (%d): Could not open mailbox %d!\n", getpid(), molecules->mbox_SO4);
     Exit();
   }
 
+  // REACTION CALCULATIONS
+  n_re_S2 = n_inj_S2;
+  n_re_CO = n_inj_CO/4;
+  n_re_SO4 = 2*n_re_S2<n_re_CO ? 2*n_re_S2 : n_re_CO;
+
   // SEM
-  if ((s_procs_completed = sem_create(-(numprocs-1))) == SYNC_FAIL) {
+  if ((s_procs_completed = sem_create(-((n_inj_S2+n_inj_CO+n_re_S2+n_re_CO+n_re_SO4)-1))) == SYNC_FAIL) {
     Printf("makeprocs (%d): Bad sem_create\n", getpid());
     Exit();
   }
 
   // HANDLE STRINGS
-  ditoa(h_mbox, h_mbox_str);
+  ditoa(h_mem, h_mem_str);
   ditoa(s_procs_completed, s_procs_completed_str);
 
-  // REACTION CALCULATIONS
-
-  // INJECTIONS
-  for(i=0; i<n_inj_S2; i++) {
-    process_create(INJ_S2, 0, 0, , s_procs_completed_str, NULL);
-    Printf("makeprocs (%d): S2 Injection %d created\n", getpid(), i);
+  // INJ/RE
+  while(n_inj_S2 + n_inj_CO + n_re_S2 + n_re_CO + n_re_SO4) {
+    if(n_inj_S2) {
+      process_create(INJ_S2, 0, 0, s_procs_completed_str, h_mem_str, NULL);
+      n_inj_S2--;
+    }
+    if(n_re_S2) {
+      process_create(RE_S2, 0, 0, s_procs_completed_str, h_mem_str, NULL);
+      n_re_S2--;
+    }
+    for(i = 0; i < 4; i++) {
+      if(n_inj_CO) {
+        process_create(INJ_CO, 0, 0, s_procs_completed_str, h_mem_str, NULL);
+        n_inj_CO--;
+      }
+    }
+    if(n_re_CO) {
+      process_create(RE_CO, 0, 0, s_procs_completed_str, h_mem_str, NULL);
+      n_re_CO--;
+    }
+    if(n_re_SO4) {
+      process_create(RE_SO4, 0, 0, s_procs_completed_str, h_mem_str, NULL);
+      n_re_SO4--;
+    }   
   }
 
-  // REACTIONS
+  // CLOSE MBOXES
+  if(mbox_close(molecules->mbox_S2) == MBOX_FAIL) {
+    Printf("makeprocs (%d): Could not close mailbox %d!\n", getpid(), molecules->mbox_S2);
+    Exit();
+  }
+  if(mbox_close(molecules->mbox_S) == MBOX_FAIL) {
+    Printf("makeprocs (%d): Could not close mailbox %d!\n", getpid(), molecules->mbox_S);
+    Exit();
+  }
+  if(mbox_close(molecules->mbox_CO) == MBOX_FAIL) {
+    Printf("makeprocs (%d): Could not close mailbox %d!\n", getpid(), molecules->mbox_CO);
+    Exit();
+  }
+  if(mbox_close(molecules->mbox_O2) == MBOX_FAIL) {
+    Printf("makeprocs (%d): Could not close mailbox %d!\n", getpid(), molecules->mbox_O2);
+    Exit();
+  }
+  if(mbox_close(molecules->mbox_C2) == MBOX_FAIL) {
+    Printf("makeprocs (%d): Could not close mailbox %d!\n", getpid(), molecules->mbox_C2);
+    Exit();
+  }
+  if(mbox_close(molecules->mbox_SO4) == MBOX_FAIL) {
+    Printf("makeprocs (%d): Could not close mailbox %d!\n", getpid(), molecules->mbox_SO4);
+    Exit();
+  }
 
   // And finally, wait until all spawned processes have finished.
-  if (sem_wait(s_procs_completed) != SYNC_SUCCESS) {
+  if(sem_wait(s_procs_completed) != SYNC_SUCCESS) {
     Printf("Bad semaphore s_procs_completed (%d) in ", s_procs_completed); Printf(argv[0]); Printf("\n");
     Exit();
   }
+
+
   Printf("makeprocs (%d): All other processes completed, exiting main process.\n", getpid());
 }
