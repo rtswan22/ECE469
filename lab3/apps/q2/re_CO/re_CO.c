@@ -1,76 +1,84 @@
 #include "usertraps.h"
 #include "misc.h"
 
-#include "radeon.h"
+#include "spawn.h"
 
 void main (int argc, char *argv[]) 
 {
 
 	mbox_t mbox_co, mbox_o2;
-	char msg[2];
-	int rv1, rv2, rv3, rv4;
+	char message[2];
+	int mol1, mol2, mol3, mol4;
 
         
 	mbox_co = dstrtol(argv[1], NULL, 10);
 	mbox_o2 = dstrtol(argv[2], NULL, 10);
+	
+	if (argc != 3) { 
+    Printf("Usage: "); Printf(argv[0]); Printf(" <handle_to_page_mapped_semaphore> <CO_mbox>\n"); 
+    Exit();
+    }
 	//Open Mbox Co
 	if(mbox_open(mbox_co) != MBOX_SUCCESS) {
-		Printf("Split CO (%d): could not open mbox\n", getpid());
+		Printf("Reaction CO (%d): could not open mbox\n", getpid());
 		Exit();
 	}
 
-	// RECIEVE CO's
-	rv1 = mbox_recv(mbox_co, 2, (void *) &msg);
-	if(rv1 != 2) {
-		Printf("Split CO (%d): could not RV1 mbox 1. Rcv=%d\n", getpid(), rv1);
+	// RECEIVE CO's
+	mol1 = mbox_recv(mbox_co, 2, (void *) &message);
+	if(mol1 != 2) {
+		Printf("Reaction CO (%d): could not mol1 mbox 1. mol=%d\n", getpid(), mol1);
 		Exit();
 	}
-	rv2 = mbox_recv(mbox_co, 2, (void *) &msg);
-	if(rv2 != 2) {
-		Printf("Split CO (%d): could not RV2 mbox 2. Rcv=%d\n", getpid(), rv2);
+	mol2 = mbox_recv(mbox_co, 2, (void *) &message);
+	if(mol2 != 2) {
+		Printf("Reaction CO (%d): could not mol2 mbox 2. mol2=%d\n", getpid(), mol2);
 		Exit();
 	}
-	rv3 = mbox_recv(mbox_co, 2, (void *) &msg);
-	if(rv3 != 2) {
-		Printf("Split CO (%d): could not RV3 mbox 3. Rcv=%d\n", getpid(), rv3);
-		Printf((char *) msg); Printf("\n");
+	mol3 = mbox_recv(mbox_co, 2, (void *) &message);
+	if(mol3 != 2) {
+		Printf("Reaction CO (%d): could not mol3 mbox 3. mol3=%d\n", getpid(), mol3);
+		Printf((char *) message); Printf("\n");
 		Exit();
 	}
-	rv4 = mbox_recv(mbox_co, 2, (void *) &msg);
-	if(rv4 != 2) {
-		Printf("Split CO (%d): could not RV4 mbox 4. Rcv=%d\n", getpid(), rv4);
+	mol4 = mbox_recv(mbox_co, 2, (void *) &message);
+	if(mol4 != 2) {
+		Printf("Reaction CO (%d): could not mol4 mbox 4. Rv=%d\n", getpid(), mol4);
 		Exit();
 	}
 
 	//Close Mailbox
 	if(mbox_close(mbox_co) != MBOX_SUCCESS) {
-		Printf("Split CO (%d): could not close mbox\n", getpid());
+		Printf("Reaction CO (%d): could not close mbox\n", getpid());
 		Exit();
 	}
 	
 	//Open Mbox O2
 	if(mbox_open(mbox_o2) != MBOX_SUCCESS) {
-		Printf("Split CO (%d): could not open mbox\n", getpid());
+		Printf("Reaction CO (%d): could not open mbox\n", getpid());
 		Exit();
 	}
 
 	// CREATE O2's
 	if(mbox_send(mbox_o2, 2, (void *) "O2") != MBOX_SUCCESS) {
-		Printf("Split CO (%d): could not send \n", getpid());
+		Printf("Reaction CO (%d): could not send \n", getpid());
 		Exit();
 	}
 	Printf("PID: %d Created an O2 molecule.\n", getpid());
 	if(mbox_send(mbox_o2, 2, (void *) "O2") != MBOX_SUCCESS) {
-		Printf("Split CO (%d): could not send \n", getpid());
+		Printf("Reaction CO (%d): could not send \n", getpid());
 		Exit();
 	}	
 	Printf("PID: %d Created an O2 molecule.\n", getpid());
 
 	// Close mailboxes
 	if(mbox_close(mbox_o2) != MBOX_SUCCESS) {
-		Printf("Split CO (%d): could not close mbox\n", getpid());
+		Printf("Reaction CO (%d): could not close mbox\n", getpid());
 		Exit();
 	}
 
-	
+	if(sem_signal(s_procs_completed) != SYNC_SUCCESS) {
+    Printf("Bad semaphore s_procs_completed (%d) in ", s_procs_completed); Printf(argv[0]); Printf(", exiting...\n");
+    Exit();
+  }
 }
