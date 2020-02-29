@@ -6,37 +6,47 @@
 
 void main (int argc, char *argv[]) 
 {
-        sem_t procs;  
-	mbox_t mbox;
-	mbox = dstrtol(argv[1], NULL, 10);
-	procs = dstrtol(argv[2],NULL,10);
+	sem_t procs;  
+  mol_boxes* molecules;
+	uint32 h_mem;
+	procs = dstrtol(argv[1],NULL,10);
+	h_mem = dstrtol(argv[2],NULL,10);
         
 	if (argc != 3) { 
-    Printf("Usage: "); Printf(argv[0]); Printf(" <handle_to_page_mapped_semaphore> <CO_mbox> \n"); 
-    Exit();
+		Printf("Usage: "); Printf(argv[0]); Printf(" <handle_to_shared_semaphore> <handle_to_molboxes> \n");
+		Exit();
   } 
 
-	//Open Mailbox
-	if(mbox_open(mbox) != MBOX_SUCCESS) {
+
+	if ((molecules = (mol_boxes*)shmat(h_mem)) == NULL) {
+    Printf("Could not map the virtual address to the memory in "); Printf(argv[0]); Printf(", exiting...\n");
+    Exit();
+  }
+	
+//Open Mailbox
+	if(mbox_open(molecules.mbox_CO) != MBOX_SUCCESS) {
 		Printf("Injection CO (%d): could not open mbox\n", getpid());
 		Exit();
 	}
 
+
 	// Inject 1 CO
-	if(mbox_send(mbox, 2, (void *)"CO") != MBOX_SUCCESS) {
+	if(mbox_send(molecules.mbox_CO, 2, (void *)"CO") != MBOX_SUCCESS) {
 		Printf("Injection CO (%d): could not send\n", getpid());
 		Exit();
 	}
 
-	Printf("PID: %d Created a CO molecule.\n", getpid());
 	//Close Mbox
-	if(mbox_close(mbox) != MBOX_SUCCESS) {
+	if(mbox_close(molecules.mbox_CO) != MBOX_SUCCESS) {
 		Printf("Injection CO (%d): could not close mbox\n", getpid());
 		Exit();
 	}
 
+
+	Printf("PID: %d Created a CO molecule.\n", getpid());
+	
 	if(sem_signal(procs) != SYNC_SUCCESS) {
-	  Printf("Bad semaphore procs completed (%d) in ", s_procs_completed); Printf(argv[0]); Printf(", exiting...\n");
+	  Printf("Bad semaphore procs completed (%d) in ", procs); Printf(argv[0]); Printf(", exiting...\n");
 	  Exit();
 	}
        

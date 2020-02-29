@@ -7,77 +7,86 @@
 void main (int argc, char *argv[]) 
 {
 
-	//work in progress
-	sem_t procs;	// Semaphore to signal the original process that we're done
-	mbox_t mbox_s, mbox_o2, mbox_so4;
-	char s_s[1], s_o2[2];
 
-	if (argc != 5) { 
-    Printf("Usage: "); Printf(argv[0]); Printf(" <handle to page mapped semaphore> <S2 mbox> <So4 mbox> <CO mbox>\n"); 
+  sem_t procs;  
+  mol_boxes* mol;
+	char s[10];
+	char o[10];
+	uint32 h_mem;
+  
+
+	int mol1, mol2, mol3, mol4;
+	procs = dstrtol(argv[1],NULL,10);
+	h_mem = dstrtol(argv[2],NULL,10);
+
+
+	if (argc != 3) { 
+    Printf("Usage: "); Printf(argv[0]); Printf(" <handle to page mapped semaphore> <handle of mailbox>\n"); 
     Exit();
   } 
 
-	s = dstrtol(argv[4], NULL, 10); 	// The "10" means base 10
-	mbox_so4 = dstrtol(argv[1], NULL, 10);
-	mbox_s = dstrtol(argv[2], NULL, 10);
-	mbox_o2 = dstrtol(argv[3], NULL, 10);
+if ((mol = (mol_boxes*)shmat(h_mem)) == NULL) {
+    Printf("Could not map the virtual address to the memory in "); Printf(argv[0]); Printf(", exiting...\n");
+    Exit();
+  }
+	
+	
 
-	if(mbox_open(mbox_so4) != MBOX_SUCCESS) {
-		Printf("Make SO4 (%d): could not open mbox\n", getpid());
-		Exit();
-	}
-
-	if(mbox_open(mbox_s) != MBOX_SUCCESS) {
-		Printf("Make SO4 (%d): could not open mbox\n", getpid());
+	//OPEN ALL MAILBOX
+	if(mbox_open(mol.box_SO4) != MBOX_SUCCESS) {
+		Printf("Re_SO4 (%d): could not open its own mbox\n", getpid());
 		Exit();
 	}
 
-	if(mbox_open(mbox_o2) != MBOX_SUCCESS) {
-		Printf("Make SO4 (%d): could not open mbox\n", getpid());
+       if(mbox_open(mol.mbox_O2) != MBOX_SUCCESS) {
+		Printf("Re_SO4 (%d): could not open mbox_O2\n", getpid());
 		Exit();
 	}
 
-	// Receive 
-	test = mbox_recv(mbox_o2, 2, (char *) &s_o2);
-	if(test != 2) {
-		Printf("Make SO4 (%d): could not rcv o2 mbox 1\n", getpid());
-		Printf("test=%d\n", test); Printf(s_o2); Printf("\n");
-		Exit();
-	}
-	if(mbox_recv(mbox_s, 2, (char *) &s_s) != 1) {
-		Printf("Make SO4 (%d): could not rcv s mbox\n", getpid());
-		Exit();
-	}
-	if(mbox_recv(mbox_o2, 2, (char *) &s_o2) != 2) {
-		Printf("Make SO4 (%d): could not rcv o2 mbox 2\n", getpid());
+
+	if(mbox_open(mol.mbox_S) != MBOX_SUCCESS) {
+		Printf("Re_SO4 (%d): could not open mbox_S\n", getpid());
 		Exit();
 	}
 
-	// Send SO4
-	if(mbox_send(mbox_so4, 3, (void *) "SO4") != MBOX_SUCCESS) {
-		Printf("Make SO4 (%d): could not send \n", getpid());
+	//RECEIVE ALL MAILBOX
+	if(mbox_recv(mol.mbox_S, 2, (char *) &s) != 1) {
+		Printf("Re_SO4 (%d): could not receive mbox_S\n", getpid());
 		Exit();
 	}
+	if(mbox_recv(mol.mbox_O2, 2, (char *) &o) != 2) {
+		Printf("Re_SO4 (%d): could not receive mbox_o2 \n", getpid());
+		Exit();
+	}
+
+	//SEND MBOX
+	if(mbox_send(mol.mbox_SO4, 3, (void *) "SO4") != MBOX_SUCCESS) {
+		Printf("Re_SO4 (%d): could not send \n", getpid());
+		Exit();
+	}
+	//Print check statement
 	Printf("PID: %d Created a SO4 molecule.\n", getpid());
+
 	// Close the mailboxes
-	if(mbox_close(mbox_so4) != MBOX_SUCCESS) {
-		Printf("Make SO4 (%d): could not close mbox\n", getpid());
+	if(mbox_close(mol.mbox_SO4) != MBOX_SUCCESS) {
+		Printf("Re_SO4 (%d): could not close its own mbox\n", getpid());
 		Exit();
 	}
 
-	if(mbox_close(mbox_s) != MBOX_SUCCESS) {
-		Printf("Make SO4 (%d): could not close mbox\n", getpid());
+	//CLOSE ALL MBOX
+		if(mbox_close(mol.mbox_O2) != MBOX_SUCCESS) {
+		Printf("Re_SO4 (%d): could not close mbox_O2\n", getpid());
 		Exit();
 	}
 
-	if(mbox_close(mbox_o2) != MBOX_SUCCESS) {
-		Printf("Make SO4 (%d): could not close mbox\n", getpid());
+	if(mbox_close(mol.mbox_S) != MBOX_SUCCESS) {
+		Printf("Re_SO4 (%d): could not close mbox_S \n", getpid());
 		Exit();
 	}
 
-	//Printf("Creating SO4 done: PID %d is complete.\n", getpid());
-	if(sem_signal(s_procs_completed) != SYNC_SUCCESS) {
-		Printf("Bad semaphore s_procs_completed (%d) in ", s_procs_completed); Printf(argv[0]); Printf(", exiting...\n");
+
+	if(sem_signal(procs) != SYNC_SUCCESS) {
+		Printf("Bad semaphore s_procs_completed (%d) in ", procs); Printf(argv[0]); Printf(", exiting...\n");
 		Exit();
 	}
 }
