@@ -81,7 +81,7 @@ mbox_t MboxCreate() {
     }
   }
 
-  return MBOX_SUCCESS;
+  return mbx;
 }
 
 //-------------------------------------------------------
@@ -213,6 +213,7 @@ int MboxSend(mbox_t handle, int length, void* message) {
   }
   RestoreIntrs(intrval);
 
+  //printf("%d:%d send length: %d\n", GetCurrentPid(), handle, length); //NOT
   mbox_messages[mbox_msg].length = length;
   bcopy(message, (void*)mbox_messages[mbox_msg].buffer, length); // CHECK
 
@@ -286,6 +287,7 @@ int MboxRecv(mbox_t handle, int maxlength, void* message) {
   }
 
   if(msg_recv->length > maxlength) {
+    //printf("mbox: %d, spec: %d\n", msg_recv->length, maxlength); //NOT
     printf("MboxRecv: message too long\n");
     msg_recv->inuse = 0; // CHECK
     return MBOX_FAIL;

@@ -5,7 +5,7 @@ lab1/
 *.zip
 *work/
 *.depend
-lab2/bin/
-lab2/lib/
+*/bin/
+*/lib/
 *.swp
 *~

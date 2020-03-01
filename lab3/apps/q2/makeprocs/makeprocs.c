@@ -13,7 +13,7 @@ void main (int argc, char *argv[])
   int i; // Loop index variable
   mol_boxes* molecules;
   sem_t s_procs_completed;
-  int h_mem; //CHECK
+  unsigned int h_mem; //CHECK
   char h_mem_str[10];
   char s_procs_completed_str[10];
 
@@ -61,6 +61,9 @@ void main (int argc, char *argv[])
     Printf("makeprocs (%d): ERROR: could not allocate mbox_SO4!", getpid());
     Exit();
   }
+  
+  // NOT
+  //Printf("S2:%d, S:%d, CO:%d, O2:%d, C2:%d, SO4:%d\n", molecules->mbox_S2, molecules->mbox_S, molecules->mbox_CO, molecules->mbox_O2, molecules->mbox_C2, molecules->mbox_SO4);
 
   // Open mailbox to prevent deallocation
   if(mbox_open(molecules->mbox_S2) == MBOX_FAIL) {
@@ -92,6 +95,11 @@ void main (int argc, char *argv[])
   n_re_S2 = n_inj_S2;
   n_re_CO = n_inj_CO/4;
   n_re_SO4 = 2*n_re_S2<n_re_CO ? 2*n_re_S2 : n_re_CO;
+  /*Printf("inj_S2: %d\n", n_inj_S2);
+  Printf("re_S2: %d\n", n_re_S2);
+  Printf("inj_CO: %d\n", n_inj_CO);
+  Printf("re_CO: %d\n", n_re_CO);
+  Printf("re_SO4: %d\n", n_re_SO4);*/
 
   // SEM
   if ((s_procs_completed = sem_create(-((n_inj_S2+n_inj_CO+n_re_S2+n_re_CO+n_re_SO4)-1))) == SYNC_FAIL) {
@@ -129,38 +137,13 @@ void main (int argc, char *argv[])
     }   
   }
 
-  // CLOSE MBOXES
-  if(mbox_close(molecules->mbox_S2) == MBOX_FAIL) {
-    Printf("makeprocs (%d): Could not close mailbox %d!\n", getpid(), molecules->mbox_S2);
-    Exit();
-  }
-  if(mbox_close(molecules->mbox_S) == MBOX_FAIL) {
-    Printf("makeprocs (%d): Could not close mailbox %d!\n", getpid(), molecules->mbox_S);
-    Exit();
-  }
-  if(mbox_close(molecules->mbox_CO) == MBOX_FAIL) {
-    Printf("makeprocs (%d): Could not close mailbox %d!\n", getpid(), molecules->mbox_CO);
-    Exit();
-  }
-  if(mbox_close(molecules->mbox_O2) == MBOX_FAIL) {
-    Printf("makeprocs (%d): Could not close mailbox %d!\n", getpid(), molecules->mbox_O2);
-    Exit();
-  }
-  if(mbox_close(molecules->mbox_C2) == MBOX_FAIL) {
-    Printf("makeprocs (%d): Could not close mailbox %d!\n", getpid(), molecules->mbox_C2);
-    Exit();
-  }
-  if(mbox_close(molecules->mbox_SO4) == MBOX_FAIL) {
-    Printf("makeprocs (%d): Could not close mailbox %d!\n", getpid(), molecules->mbox_SO4);
-    Exit();
-  }
-
   // And finally, wait until all spawned processes have finished.
   if(sem_wait(s_procs_completed) != SYNC_SUCCESS) {
     Printf("Bad semaphore s_procs_completed (%d) in ", s_procs_completed); Printf(argv[0]); Printf("\n");
     Exit();
   }
 
+  //Printf("%d S2s left over. ", ); // CHECK
 
   Printf("makeprocs (%d): All other processes completed, exiting main process.\n", getpid());
 }
