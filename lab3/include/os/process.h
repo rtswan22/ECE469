@@ -32,6 +32,7 @@
 
 typedef	void (*VoidFunc)();
 
+
 // Process control block
 typedef struct PCB {
   uint32	*currentSavedFrame; // -> current saved frame.  MUST BE 1ST!
@@ -45,7 +46,15 @@ typedef struct PCB {
 
   int           pinfo;          // Turns on printing of runtime stats
   int           pnice;          // Used in priority calculation
-	
+	int sleep, run, wake,switched;
+  int jiffies;
+  int quanta;
+  int priority;
+  double estcpu;
+  int base; 
+  int flag_auto;
+  int flag_yield;
+  int flag_idle;
 
 } PCB;
 
@@ -92,5 +101,23 @@ int GetPidFromAddress(PCB *pcb);
 
 void ProcessUserSleep(int seconds);
 void ProcessYield();
+
+#define NUM_RUN_QUEUES 32
+#define PRIORITIES_PER_QUEUE 4
+
+
+void ProcessRecalcPriority(PCB *pcb);
+inline int WhichQueue(PCB *pcb);
+void ProcessInsertRunning(PCB *pcb);
+void ProcessDecayEstcpu(PCB *pcb);
+void ProcessDecayEstcpuSleep(PCB *pcb, int time_asleep_jiffies);
+PCB *ProcessFindHighestPriorityPCB();
+void ProcessDecayAllEstcpus();
+void ProcessFixRunQueues();
+int ProcessCountAutowake();
+void ProcessPrintRunQueues();
+
+
+
 
 #endif	/* __process_h__ */

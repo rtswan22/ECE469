@@ -79,6 +79,14 @@ void ProcessModuleInit () {
     }
     // Next, set the pcb to be available
     pcbs[i].flags = PROCESS_STATUS_FREE;
+    pcb[i].jiffies = 0;
+    pcb[i].flag_yield = 0;
+    pcb[i].flag_idle = 0;
+    pcb[i].sleep = 0;
+    pcb[i].wake = 0;
+    pcb[i].run = 0;
+    pcb[i].switched = 0; 
+    
     // Finally, insert the link into the queue
     if (AQueueInsertFirst(&freepcbs, pcbs[i].l) != QUEUE_SUCCESS) {
       printf("FATAL ERROR: could not insert PCB link into queue in ProcessModuleInit!\n");
@@ -227,6 +235,11 @@ void ProcessSchedule () {
   dbprintf ('p',"About to switch to PCB 0x%x,flags=0x%x @ 0x%x\n",
 	    (int)pcb, pcb->flags, (int)(pcb->sysStackPtr[PROCESS_STACK_IAR]));
 
+
+
+  if(currentPCB->pinfo)
+	  printf(PROCESS_CPUSTATS_FORMAT, (int)(currentPCB-pcbs), currentPCB->jiffies, currentPCB->pnice);
+
   // Clean up zombie processes here.  This is done at interrupt time
   // because it can't be done while the process might still be running
   while (!AQueueEmpty(&zombieQueue)) {
@@ -303,7 +316,10 @@ void ProcessWakeup (PCB *wakeup) {
     printf("FATAL ERROR: could not insert link into runQueue in ProcessWakeup!\n");
     exitsim();
   }
+  
 }
+
+
 
 
 //----------------------------------------------------------------------
@@ -407,6 +423,8 @@ int ProcessFork (VoidFunc func, uint32 param, int pnice, int pinfo,char *name, i
   dbprintf('p', "ProcessFork: Copying process name (%s) to pcb\n", name);
   dstrcpy(pcb->name, name);
 
+  pcb->pnice = pnice;
+  pcb->pinfo = pinfo;
   //----------------------------------------------------------------------
   // This section initializes the memory for this process
   //----------------------------------------------------------------------
