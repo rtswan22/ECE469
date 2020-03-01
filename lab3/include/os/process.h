@@ -45,6 +45,8 @@ typedef struct PCB {
 
   int           pinfo;          // Turns on printing of runtime stats
   int           pnice;          // Used in priority calculation
+	
+
 } PCB;
 
 // Offsets of various registers from the stack pointer in the register
