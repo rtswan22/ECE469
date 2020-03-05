@@ -44,9 +44,9 @@ typedef struct PCB {
   int		npages;		// Number of pages allocated to this process
   Link		*l;		// Used for keeping PCB in queues
 
-  int           pinfo;          // Turns on printing of runtime stats
-  int           pnice;          // Used in priority calculation
-	int sleep, run, wake,switched;
+  int pinfo;          // Turns on printing of runtime stats
+  int pnice;          // Used in priority calculation
+  int run, switched, wake, sleep;
   int jiffies;
   int quanta;
   int priority;
@@ -55,7 +55,6 @@ typedef struct PCB {
   int flag_auto;
   int flag_yield;
   int flag_idle;
-
 } PCB;
 
 // Offsets of various registers from the stack pointer in the register
@@ -99,13 +98,12 @@ extern unsigned GetCurrentPid();
 void process_create(char *name, ...);
 int GetPidFromAddress(PCB *pcb);
 
-void ProcessUserSleep(int seconds);
-void ProcessYield();
-
+// Q4
+#define MIN_USER_PRIO 0
+#define MAX_USER_PRIO 49
 #define NUM_RUN_QUEUES 32
 #define PRIORITIES_PER_QUEUE 4
-
-
+#define NUM_JIFFIES_TIL_DECAY 100
 void ProcessRecalcPriority(PCB *pcb);
 inline int WhichQueue(PCB *pcb);
 void ProcessInsertRunning(PCB *pcb);
@@ -117,7 +115,8 @@ void ProcessFixRunQueues();
 int ProcessCountAutowake();
 void ProcessPrintRunQueues();
 
-
-
+// Q5
+void ProcessUserSleep(int seconds);
+void ProcessYield();
 
 #endif	/* __process_h__ */

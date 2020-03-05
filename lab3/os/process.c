@@ -27,7 +27,7 @@ static Queue	freepcbs;
 
 // List of processes that are ready to run (ie, not waiting for something
 // to happen).
-static Queue	runQueue;
+static Queue	runQueue;// [NUM_RUN_QUEUES]; // Q4: CHECK think this needs to be changed to array but that doesn't agree with other uses
 
 // List of processes that are waiting for something to happen.  There's no
 // reason why this must be a single list; there could be many lists for many
@@ -129,7 +129,7 @@ void ProcessFreeResources (PCB *pcb) {
   // Your code for closing any open mailbox connections
   // that a dying process might have goes here.
   //-----------------------------------------------------
-	MboxCloseAllByPid(GetPidFromAddress(pcb));
+  MboxCloseAllByPid(GetPidFromAddress(pcb));
 
   // Allocate a new link for this pcb on the freepcbs queue
   if ((pcb->l = AQueueAllocLink(pcb)) == NULL) {
@@ -202,6 +202,7 @@ void ProcessSetResult (PCB * pcb, uint32 result) {
 //
 //----------------------------------------------------------------------
 void ProcessSchedule () {
+  // NEED update pcb runtime
   PCB *pcb=NULL;
   int i=0;
   Link *l=NULL;
@@ -238,7 +239,7 @@ void ProcessSchedule () {
 
 
   if(currentPCB->pinfo)
-	  printf(PROCESS_CPUSTATS_FORMAT, (int)(currentPCB-pcbs), currentPCB->jiffies, currentPCB->pnice);
+    printf(PROCESS_CPUSTATS_FORMAT, (int)(currentPCB-pcbs), currentPCB->jiffies, currentPCB->pnice); // CHECK think this should use runtime instead and runtime needs to be continuous calculated
 
   // Clean up zombie processes here.  This is done at interrupt time
   // because it can't be done while the process might still be running
@@ -974,6 +975,86 @@ int GetPidFromAddress(PCB *pcb) {
   return (int)(pcb - pcbs);
 }
 
+// Q4 CHECK
+// NEED initialize the runQueues
+// NEED to increment estcpu each time a process uses a window
+void ProcessRecalcPriority(PCB *pcb) { // from lab doc
+  pcb->priority = pcb->base + pcb->estcpu/4 + 2*pcb->pnice; // CHECK base usage
+}
+inline int WhichQueue(PCB *pcb) { // from lab doc
+  return pcb->priority/PRIORITIES_PER_QUEUE;
+}
+void ProcessInsertRunning(PCB *pcb) {
+  
+}
+void ProcessDecayEstcpu(PCB *pcb) { // from lab doc
+  int load = 1;
+  pcb->estcpu = (pcb->estcpu * ((double)(2*load))/((double)(2*load+1))) + (double)pcb->pnice;
+  ProcessRecalcPriority(pcb); // CHECK yes or no?
+}
+void ProcessDecayEstcpuSleep(PCB *pcb, int time_asleep_jiffies) { // from lab doc
+  int i = 0;
+  int load = 1;
+  int num_windows_asleep;
+  double expo_base;
+  double expo_val;
+  if(time_asleep_jiffies >= NUM_JIFFIES_TIL_DECAY) {
+    num_windows_asleep = time_asleep_jiffies/PROCESS_QUANTUM_JIFFIES;
+    expo_base = ((double)(2*load))/((double)(2*load+1));
+    expo_val = 1;
+    for(i = 0; i < num_windows_asleep; i++) { expo_val *= expo_base; }
+    pcb->estcpu *= expo_val;
+  }
+}
+PCB *ProcessFindHighestPriorityPCB() {
+  int i = 0;
+  int j = 0;
+  int qLen = 0;
+  Link* l;
+  PCB* currPCB;
+  PCB* prioPCB;
+  for(i = 0; i < NUM_RUN_QUEUES; i++) {
+    qLen = AQueueLength(&runQueue[i]); // CHECK array of runQueue definition
+    for(j = 0; j < qLen; j++) {
+      l = AQueueFirst(&runQueue[i]); // CHECK array of runQueue definition
+      currPCB = (PCB*)AQueueObject(l);
+      if(prioPCB) {
+        if(prioPCB->priority < currPCB->priority) {
+          prioPCB = currPCB;
+        }
+      }
+      else { prioPCB = currPCB; }
+    }
+  }
+  return prioPCB; // NEED null check?
+}
+
+void ProcessDecayAllEstcpus() { // from lab doc
+  int i = 0;
+  int j = 0;
+  int qLen = 0;
+  Link* l;
+  PCB* currPCB;
+  for(i = 0; i < NUM_RUN_QUEUES; i++) {
+    qLen = AQueueLength(&runQueue[i]); // CHECK array of runQueue definition
+    for(j = 0; j < qLen; j++) {
+      l = AQueueFirst(&runQueue[i]); // CHECK array of runQueue definition
+      currPCB = (PCB*)AQueueObject(l);
+      ProcessDecayEstcpu(currPCB);
+    }
+  }
+}
+void ProcessFixRunQueues() {
+  
+}
+int ProcessCountAutowake() {
+  
+}
+void ProcessPrintRunQueues() {
+  
+}
+
+// Q5
 //--------------------------------------------------------
 // ProcessSleep assumes that it will be immediately 
 // followed by a call to ProcessSchedule (in traps.c).
