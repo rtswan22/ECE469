@@ -27,7 +27,7 @@ static Queue	freepcbs;
 
 // List of processes that are ready to run (ie, not waiting for something
 // to happen).
-static Queue	runQueue;// [NUM_RUN_QUEUES]; // Q4: CHECK think this needs to be changed to array but that doesn't agree with other uses
+static Queue	runQueue[NUM_RUN_QUEUES]; // Q4: now an array
 
 // List of processes that are waiting for something to happen.  There's no
 // reason why this must be a single list; there could be many lists for many
@@ -66,7 +66,7 @@ void ProcessModuleInit () {
 
   dbprintf ('p', "ProcessModuleInit: function started\n");
   AQueueInit (&freepcbs);
-  AQueueInit(&runQueue);
+  for(i = 0; i < NUM_RUN_QUEUES; i++) AQueueInit(&runQueue[i]); // Q4: loop
   AQueueInit (&waitQueue);
   AQueueInit (&zombieQueue);
   // For each PCB slot in the global pcbs array:
@@ -207,12 +207,11 @@ void ProcessSchedule () {
   int i=0;
   Link *l=NULL;
 
-  dbprintf ('p', "Now entering ProcessSchedule (cur=0x%x, %d ready)\n",
-	    (int)currentPCB, AQueueLength (&runQueue));
+  dbprintf ('p', "Now entering ProcessSchedule (cur=0x%x, %d ready)\n", (int)currentPCB, AQueueLength(&runQueue)); //NEED: runQueue is array now
   // The OS exits if there's no runnable process.  This is a feature, not a
   // bug.  An easy solution to allowing no runnable "user" processes is to
   // have an "idle" process that's simply an infinite loop.
-  if (AQueueEmpty(&runQueue)) {
+  if (AQueueEmpty(&runQueue)) { //NEED: runQueue is array now
     if (!AQueueEmpty(&waitQueue)) {
       printf("FATAL ERROR: no runnable processes, but there are sleeping processes waiting!\n");
       l = AQueueFirst(&waitQueue);
@@ -228,10 +227,10 @@ void ProcessSchedule () {
   }
 
   // Move the front of the queue to the end.  The running process was the one in front.
-  AQueueMoveAfter(&runQueue, AQueueLast(&runQueue), AQueueFirst(&runQueue));
+  AQueueMoveAfter(&runQueue, AQueueLast(&runQueue), AQueueFirst(&runQueue)); //NEED: runQueue is array now
 
   // Now, run the one at the head of the queue.
-  pcb = (PCB *)AQueueObject(AQueueFirst(&runQueue));
+  pcb = (PCB *)AQueueObject(AQueueFirst(&runQueue)); //NEED: runQueue is array now
   currentPCB = pcb;
   dbprintf ('p',"About to switch to PCB 0x%x,flags=0x%x @ 0x%x\n",
 	    (int)pcb, pcb->flags, (int)(pcb->sysStackPtr[PROCESS_STACK_IAR]));
@@ -313,7 +312,7 @@ void ProcessWakeup (PCB *wakeup) {
     printf("FATAL ERROR: could not get link for wakeup PCB in ProcessWakeup!\n");
     exitsim();
   }
-  if (AQueueInsertLast(&runQueue, wakeup->l) != QUEUE_SUCCESS) {
+  if (AQueueInsertLast(&runQueue, wakeup->l) != QUEUE_SUCCESS) { //NEED: runQueue is array now
     printf("FATAL ERROR: could not insert link into runQueue in ProcessWakeup!\n");
     exitsim();
   }
@@ -978,8 +977,10 @@ int GetPidFromAddress(PCB *pcb) {
 // Q4 CHECK
 // NEED initialize the runQueues
 // NEED to increment estcpu each time a process uses a window
+// NEED TO do priority limits
+// NEED to put the runtime calculations somewhere
 void ProcessRecalcPriority(PCB *pcb) { // from lab doc
-  pcb->priority = pcb->base + pcb->estcpu/4 + 2*pcb->pnice; // CHECK base usage
+  pcb->priority = pcb->base + pcb->estcpu/4 + 2*pcb->pnice;
 }
 inline int WhichQueue(PCB *pcb) { // from lab doc
   return pcb->priority/PRIORITIES_PER_QUEUE;
@@ -990,7 +991,7 @@ void ProcessInsertRunning(PCB *pcb) {
 void ProcessDecayEstcpu(PCB *pcb) { // from lab doc
   int load = 1;
   pcb->estcpu = (pcb->estcpu * ((double)(2*load))/((double)(2*load+1))) + (double)pcb->pnice;
-  ProcessRecalcPriority(pcb); // CHECK yes or no?
+  ProcessRecalcPriority(pcb);
 }
 void ProcessDecayEstcpuSleep(PCB *pcb, int time_asleep_jiffies) { // from lab doc
   int i = 0;
@@ -1014,9 +1015,9 @@ PCB *ProcessFindHighestPriorityPCB() {
   PCB* currPCB;
   PCB* prioPCB;
   for(i = 0; i < NUM_RUN_QUEUES; i++) {
-    qLen = AQueueLength(&runQueue[i]); // CHECK array of runQueue definition
+    qLen = AQueueLength(&runQueue[i]);
     for(j = 0; j < qLen; j++) {
-      l = AQueueFirst(&runQueue[i]); // CHECK array of runQueue definition
+      l = AQueueFirst(&runQueue[i]);
       currPCB = (PCB*)AQueueObject(l);
       if(prioPCB) {
         if(prioPCB->priority < currPCB->priority) {
@@ -1036,9 +1037,9 @@ void ProcessDecayAllEstcpus() { // from lab doc
   Link* l;
   PCB* currPCB;
   for(i = 0; i < NUM_RUN_QUEUES; i++) {
-    qLen = AQueueLength(&runQueue[i]); // CHECK array of runQueue definition
+    qLen = AQueueLength(&runQueue[i]);
     for(j = 0; j < qLen; j++) {
-      l = AQueueFirst(&runQueue[i]); // CHECK array of runQueue definition
+      l = AQueueFirst(&runQueue[i]);
       currPCB = (PCB*)AQueueObject(l);
       ProcessDecayEstcpu(currPCB);
     }

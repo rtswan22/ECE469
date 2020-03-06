@@ -46,8 +46,7 @@ typedef struct PCB {
 
   int pinfo;          // Turns on printing of runtime stats
   int pnice;          // Used in priority calculation
-  int run, switched, wake, sleep;
-  int jiffies;
+  int jiffies, switched, wake, sleep;
   int quanta;
   int priority;
   double estcpu;
