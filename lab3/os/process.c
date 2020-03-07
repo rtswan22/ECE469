@@ -80,13 +80,12 @@ void ProcessModuleInit () {
     }
     // Next, set the pcb to be available
     pcbs[i].flags = PROCESS_STATUS_FREE;
-    pcb[i].jiffies = 0;
-    pcb[i].flag_yield = 0;
-    pcb[i].flag_idle = 0;
-    pcb[i].sleep = 0;
-    pcb[i].wake = 0;
-    pcb[i].run = 0;
-    pcb[i].switched = 0; 
+    pcbs[i].jiffies = 0;
+    pcbs[i].flag_yield = 0;
+    pcbs[i].flag_idle = 0;
+    pcbs[i].sleep = 0;
+    pcbs[i].wake = 0;
+    pcbs[i].switched = 0; 
     
     // Finally, insert the link into the queue
     if (AQueueInsertFirst(&freepcbs, pcbs[i].l) != QUEUE_SUCCESS) {
@@ -208,11 +207,11 @@ void ProcessSchedule () {
   Link *l=NULL;
   currentPCB->jiffies += ClkGetCurJiffies() - currentPCB->switched; // Q3: time // CHECK: needs to account for when it is entering from other areas?? such as process yield and sleep
 
-  dbprintf ('p', "Now entering ProcessSchedule (cur=0x%x, %d ready)\n", (int)currentPCB, AQueueLength(&runQueue)); //NEED: runQueue is array now
+  dbprintf ('p', "Now entering ProcessSchedule (cur=0x%x, %d ready)\n", (int)currentPCB, AQueueLength(&runQueue[0])); //NEED: runQueue is array now
   // The OS exits if there's no runnable process.  This is a feature, not a
   // bug.  An easy solution to allowing no runnable "user" processes is to
   // have an "idle" process that's simply an infinite loop.
-  if (AQueueEmpty(&runQueue)) { //NEED: runQueue is array now
+  if (AQueueEmpty(&runQueue[0])) { //NEED: runQueue is array now
     if (!AQueueEmpty(&waitQueue)) {
       printf("FATAL ERROR: no runnable processes, but there are sleeping processes waiting!\n");
       l = AQueueFirst(&waitQueue);
@@ -228,10 +227,10 @@ void ProcessSchedule () {
   }
 
   // Move the front of the queue to the end.  The running process was the one in front.
-  AQueueMoveAfter(&runQueue, AQueueLast(&runQueue), AQueueFirst(&runQueue)); //NEED: runQueue is array now
+  AQueueMoveAfter(&runQueue[0], AQueueLast(&runQueue[0]), AQueueFirst(&runQueue[0])); //NEED: runQueue is array now
 
   // Now, run the one at the head of the queue.
-  pcb = (PCB *)AQueueObject(AQueueFirst(&runQueue)); //NEED: runQueue is array now
+  pcb = (PCB *)AQueueObject(AQueueFirst(&runQueue[0])); //NEED: runQueue is array now
   currentPCB = pcb;
   dbprintf ('p',"About to switch to PCB 0x%x,flags=0x%x @ 0x%x\n",
 	    (int)pcb, pcb->flags, (int)(pcb->sysStackPtr[PROCESS_STACK_IAR]));
@@ -318,7 +317,7 @@ void ProcessWakeup (PCB *wakeup) {
     printf("FATAL ERROR: could not get link for wakeup PCB in ProcessWakeup!\n");
     exitsim();
   }
-  if (AQueueInsertLast(&runQueue, wakeup->l) != QUEUE_SUCCESS) { //NEED: runQueue is array now
+  if (AQueueInsertLast(&runQueue[0], wakeup->l) != QUEUE_SUCCESS) { //NEED: runQueue is array now
     printf("FATAL ERROR: could not insert link into runQueue in ProcessWakeup!\n");
     exitsim();
   }
@@ -578,7 +577,7 @@ int ProcessFork (VoidFunc func, uint32 param, int pnice, int pinfo,char *name, i
     printf("FATAL ERROR: could not get link for forked PCB in ProcessFork!\n");
     exitsim();
   }
-  if (AQueueInsertLast(&runQueue, pcb->l) != QUEUE_SUCCESS) {
+  if (AQueueInsertLast(&runQueue[0], pcb->l) != QUEUE_SUCCESS) {//NEED: runQueue is array now
     printf("FATAL ERROR: could not insert link into runQueue in ProcessFork!\n");
     exitsim();
   }
@@ -1104,8 +1103,14 @@ void ProcessDecayAllEstcpus() { // from lab doc
 }
 int ProcessDiffQueue(PCB* pcb, int curr_queue_idx) {
   if(pcb->priority < curr_queue_idx*PRIORITIES_PER_QUEUE || pcb->priority > ((curr_queue_idx+1)*PRIORITIES_PER_QUEUE - 1)) { // CHECK
-    // NEED place in correct Queue. want to try to use Insert Running func
+    if(AQueueRemove(&(pcb->l)) != QUEUE_SUCCESS) {
+      printf("ProcessDiffQueue: failed to remove queue\n");
+      exitsim();
+    }
+    ProcessInsertRunning(pcb); // CHECK: will this work here or does it need different functions?
+    return 1;
   }
+  return 0;
 }
 void ProcessFixRunQueues() { // CHECK
   int i = 0;
@@ -1142,8 +1147,8 @@ int ProcessCountAutowake() {
     queue_len = AQueueLength(currQueue);
     l_i = AQueueFirst(currQueue);
     for(j = 0; j < queue_len; j++) { // each element in queue
-      pcb_i = (PCB*)AQueueObject(l_i)
-      if(pcb_i->flag_wake) { autowake_count++; }
+      pcb_i = (PCB*)AQueueObject(l_i);
+      if(pcb_i->flag_auto) { autowake_count++; }
       l_i = AQueueNext(l_i);
     }
   }
