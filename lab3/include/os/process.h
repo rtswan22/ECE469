@@ -98,8 +98,11 @@ void process_create(char *name, ...);
 int GetPidFromAddress(PCB *pcb);
 
 // Q4
-#define MIN_USER_PRIO 0
-#define MAX_USER_PRIO 49
+#define MAX_PRIO 127
+#define MIN_KERNEL_PRIO 0
+#define MAX_KERNEL_PRIO 49
+#define MIN_USER_PRIO 50
+#define MAX_USER_PRIO MAX_PRIO
 #define NUM_RUN_QUEUES 32
 #define PRIORITIES_PER_QUEUE 4
 #define NUM_JIFFIES_TIL_DECAY 100
