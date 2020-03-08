@@ -16,6 +16,7 @@ void main (int argc, char *argv[])
   unsigned int h_mem; //CHECK
   char h_mem_str[10];
   char s_procs_completed_str[10];
+  int pinfo = 1;
 
   // ARGUMENTS
   if (argc != 3) {
@@ -114,25 +115,25 @@ void main (int argc, char *argv[])
   // INJ/RE
   while(n_inj_S2 + n_inj_CO + n_re_S2 + n_re_CO + n_re_SO4) {
     if(n_inj_S2) {
-      process_create(INJ_S2, 0, 0, s_procs_completed_str, h_mem_str, NULL);
+      process_create(INJ_S2, 0, pinfo, s_procs_completed_str, h_mem_str, NULL);
       n_inj_S2--;
     }
     if(n_re_S2) {
-      process_create(RE_S2, 0, 0, s_procs_completed_str, h_mem_str, NULL);
+      process_create(RE_S2, 0, pinfo, s_procs_completed_str, h_mem_str, NULL);
       n_re_S2--;
     }
     for(i = 0; i < 4; i++) {
       if(n_inj_CO) {
-        process_create(INJ_CO, 0, 0, s_procs_completed_str, h_mem_str, NULL);
+        process_create(INJ_CO, 0, pinfo, s_procs_completed_str, h_mem_str, NULL);
         n_inj_CO--;
       }
     }
     if(n_re_CO) {
-      process_create(RE_CO, 0, 0, s_procs_completed_str, h_mem_str, NULL);
+      process_create(RE_CO, 0, pinfo, s_procs_completed_str, h_mem_str, NULL);
       n_re_CO--;
     }
     if(n_re_SO4) {
-      process_create(RE_SO4, 0, 0, s_procs_completed_str, h_mem_str, NULL);
+      process_create(RE_SO4, 0, pinfo, s_procs_completed_str, h_mem_str, NULL);
       n_re_SO4--;
     }   
   }
