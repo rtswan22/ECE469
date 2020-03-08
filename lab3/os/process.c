@@ -1150,7 +1150,28 @@ int ProcessCountAutowake() {
   return autowake_count;
 }
 void ProcessPrintRunQueues() {
-  
+  int i;
+  Link* l;
+  Link* tmp_l;
+  PCB* pcb;
+  printf("Printing run queues....\n");
+  for(i = 0; i < NUM_RUN_QUEUES; i++) {
+    printf("%d ", i);
+    if(AQueueEmpty(&runQueues[i])) {
+      printf(" | \n");
+      continue;
+    }
+    tmp_l = AQueueFirst(&runQueues[i]);
+    while (tmp_l != NULL) {
+      l = tmp_l;
+      tmp_l = AQueueNext(tmp_l);
+      pcb = AQueueObject(l);
+      printf("%d[%d], ", GetPidFromAddress(pcb), pcb->priority);
+    }
+    printf("\n");
+  }
+  printf("Finished printing.\n");
+
 }
 
 // Q5
