@@ -22,6 +22,7 @@
 // routines for context switches.
 PCB		*currentPCB;
 PCB *idlePCB; // Q5
+int lastDecayJiffies;
 
 // List of free PCBs.
 static Queue	freepcbs;
@@ -80,12 +81,6 @@ void ProcessModuleInit () {
     }
     // Next, set the pcb to be available
     pcbs[i].flags = PROCESS_STATUS_FREE;
-    pcbs[i].jiffies = 0;
-    pcbs[i].flag_yield = 0;
-    pcbs[i].flag_idle = 0;
-    pcbs[i].sleep = 0;
-    pcbs[i].wake = 0;
-    pcbs[i].switched = 0; 
     
     // Finally, insert the link into the queue
     if (AQueueInsertFirst(&freepcbs, pcbs[i].l) != QUEUE_SUCCESS) {
@@ -207,7 +202,36 @@ void ProcessSchedule () {
   Link *l=NULL;
   currentPCB->jiffies += ClkGetCurJiffies() - currentPCB->switched; // Q3: time // CHECK: needs to account for when it is entering from other areas?? such as process yield and sleep
 
-  dbprintf ('p', "Now entering ProcessSchedule (cur=0x%x, %d ready)\n", (int)currentPCB, AQueueLength(&runQueue[0])); //NEED: runQueue is array now
+  dbprintf ('p', "Now entering ProcessSchedule (cur=0x%x, %d ready)\n", (int)currentPCB, AQueueLength((currentPCB->l)->queue)); //CHECK: currPCB always have link here?
+  
+  ///////////////////////////////////////////////////////
+   // ESTCPU, PRIORITY
+  if((currentPCB->jiffies - currentPCB->quanta*PROCESS_QUANTUM_JIFFIES) >= PROCESS_QUANTUM_JIFFIES) {
+    currentPCB->estcpu += 1.0;
+    currentPCB += 1;
+    ProcessRecalcPriority(currentPCB); // CHECK in or outside of if{}
+  }
+  // NEED: yielding stuff
+  // PLACE IN NEW QUEUE
+  if(AQueueRemove(&(currentPCB->l)) != QUEUE_SUCCESS) {
+    printf("FATAL ERROR: could not change process runQueue ProcessSchedule!\n");
+    exitsim();
+  }
+  ProcessInsertRunning(currentPCB);
+  // DECAY
+  if((ClkGetCurJiffies() - lastDecayJiffies) >= NUM_JIFFIES_TIL_DECAY) {
+    ProcessDecayAllEstcpus();
+    ProcessFixRunQueues(); // CHECK fix all or?
+    lastDecayJiffies = ClkGetCurJiffies();
+  }
+  // WAKEUP SLEEPING
+  // NEED: go through and wakeup required processes
+  // GET NEXT PCB
+  // NEED: find highest queue or PCB?
+  // SET PCB
+  // NEED: currentPCB = highest PCB
+  ///////////////////////////////////////////////////////
+  
   // The OS exits if there's no runnable process.  This is a feature, not a
   // bug.  An easy solution to allowing no runnable "user" processes is to
   // have an "idle" process that's simply an infinite loop.
@@ -429,6 +453,16 @@ int ProcessFork (VoidFunc func, uint32 param, int pnice, int pinfo,char *name, i
 
   pcb->pnice = pnice;
   pcb->pinfo = pinfo;
+  pcb->jiffies = 0;
+  pcb->switched = 0;
+  pcb->wake = 0;
+  pcb->sleep = 0;
+  pcb->quanta = 0;
+  pcb->estcpu = 0.0;
+  pcb->flag_auto = 0;
+  pcb->flag_yield = 0;
+  pcb->flag_idle = 0;
+  
   //----------------------------------------------------------------------
   // This section initializes the memory for this process
   //----------------------------------------------------------------------
@@ -547,6 +581,7 @@ int ProcessFork (VoidFunc func, uint32 param, int pnice, int pinfo,char *name, i
     // Set the correct address at which to execute a user process.
     stackframe[PROCESS_STACK_IAR] = (uint32)start;
     pcb->flags |= PROCESS_TYPE_USER;
+    pcb->base = MIN_USER_PRIO;
   } else {
     // Set r31 to ProcessExit().  This will only be called for a system
     // process; user processes do an exit() trap.
@@ -568,7 +603,9 @@ int ProcessFork (VoidFunc func, uint32 param, int pnice, int pinfo,char *name, i
 
     // Mark this as a system process.
     pcb->flags |= PROCESS_TYPE_SYSTEM;
+    pcb->base = MIN_KERNEL_PRIO;
   }
+  ProcessRecalcPriority(pcb);
 
   // Place PCB onto run queue
   intrs = DisableIntrs ();
@@ -576,10 +613,11 @@ int ProcessFork (VoidFunc func, uint32 param, int pnice, int pinfo,char *name, i
     printf("FATAL ERROR: could not get link for forked PCB in ProcessFork!\n");
     exitsim();
   }
-  if (AQueueInsertLast(&runQueue[0], pcb->l) != QUEUE_SUCCESS) {//NEED: runQueue is array now
+  ProcessInsertRunning(pcb);
+  /*if (AQueueInsertLast(&runQueue[0], pcb->l) != QUEUE_SUCCESS) {
     printf("FATAL ERROR: could not insert link into runQueue in ProcessFork!\n");
     exitsim();
-  }
+  }*/
   RestoreIntrs (intrs);
 
   // If this is the first process, make it the current one
@@ -908,6 +946,7 @@ void main (int argc, char *argv[])
   }
 
   // Start the clock which will in turn trigger periodic ProcessSchedule's
+  lastDecayJiffies = 0; // CHECK
   ClkStart();
 
   intrreturn ();
