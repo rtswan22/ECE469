@@ -200,18 +200,22 @@ void ProcessSchedule () {
   PCB *pcb=NULL;
   int i=0;
   Link *l=NULL;
+  Queue* hpQueue = NULL;
+  PCB* hpPCB = NULL;
   currentPCB->jiffies += ClkGetCurJiffies() - currentPCB->switched; // Q3: time // CHECK: needs to account for when it is entering from other areas?? such as process yield and sleep
 
   dbprintf ('p', "Now entering ProcessSchedule (cur=0x%x, %d ready)\n", (int)currentPCB, AQueueLength((currentPCB->l)->queue)); //CHECK: currPCB always have link here?
-  
+  /*
   ///////////////////////////////////////////////////////
-   // ESTCPU, PRIORITY
-  if((currentPCB->jiffies - currentPCB->quanta*PROCESS_QUANTUM_JIFFIES) >= PROCESS_QUANTUM_JIFFIES) {
-    currentPCB->estcpu += 1.0;
-    currentPCB += 1;
-    ProcessRecalcPriority(currentPCB); // CHECK in or outside of if{}
+  // ESTCPU, PRIORITY, YIELD
+  if(!currentPCB->flag_yield) {
+    if((currentPCB->jiffies - currentPCB->quanta*PROCESS_QUANTUM_JIFFIES) >= PROCESS_QUANTUM_JIFFIES) {
+      currentPCB->estcpu += 1.0;
+      currentPCB += 1;
+      ProcessRecalcPriority(currentPCB); // CHECK in or outside of if{}
+    }
   }
-  // NEED: yielding stuff
+  else { currentPCB->flag_yield = 0; }
   // PLACE IN NEW QUEUE
   if(AQueueRemove(&(currentPCB->l)) != QUEUE_SUCCESS) {
     printf("FATAL ERROR: could not change process runQueue ProcessSchedule!\n");
@@ -221,21 +225,43 @@ void ProcessSchedule () {
   // DECAY
   if((ClkGetCurJiffies() - lastDecayJiffies) >= NUM_JIFFIES_TIL_DECAY) {
     ProcessDecayAllEstcpus();
-    ProcessFixRunQueues(); // CHECK fix all or?
+    ProcessFixRunQueues(); // CHECK fix all or just sleeping? non sleeping fix as they are scheduled?
     lastDecayJiffies = ClkGetCurJiffies();
   }
   // WAKEUP SLEEPING
-  // NEED: go through and wakeup required processes
+  ProcessAutowake();
   // GET NEXT PCB
-  // NEED: find highest queue or PCB?
+  // CHECK: find highest queue then first PCB? or highest PCB in highest queue?
+  hpQueue = ProcessFindHighestPriorityQueue();
+  if(hpQueue == NULL) {
+    if(ProcessCountAutowake == 0) { // if no autowake
+      if(!AQueueEmpty(&waitQueue)) { // if items left in wait queue and no autowake
+        printf("FATAL ERROR: no runnable processes, but there are sleeping processes waiting!\n");
+        l = AQueueFirst(&waitQueue);
+        while(l != NULL) {
+          pcb = AQueueObject(l);
+          printf("Sleeping process %d: ", i++); printf("PID = %d\n", (int)(pcb - pcbs));
+          l = AQueueNext(l);
+        }
+        exitsim();
+      }
+      printf ("No runnable processes - exiting!\n");
+      exitsim ();	// NEVER RETURNS
+    }
+    else {
+      // NEED: wait for autowake. what do you call? or do?
+    }
+  }
+  hpPCB = AQueueFirst(hpQueue);
   // SET PCB
-  // NEED: currentPCB = highest PCB
+  currentPCB = hpPCB;
   ///////////////////////////////////////////////////////
-  
+  */
+  ///////////////////////////////////////////////////////
   // The OS exits if there's no runnable process.  This is a feature, not a
   // bug.  An easy solution to allowing no runnable "user" processes is to
   // have an "idle" process that's simply an infinite loop.
-  if (AQueueEmpty(&runQueue[0])) { //NEED: runQueue is array now
+  if (AQueueEmpty(&runQueue[0])) {
     if (!AQueueEmpty(&waitQueue)) {
       printf("FATAL ERROR: no runnable processes, but there are sleeping processes waiting!\n");
       l = AQueueFirst(&waitQueue);
@@ -251,13 +277,13 @@ void ProcessSchedule () {
   }
 
   // Move the front of the queue to the end.  The running process was the one in front.
-  AQueueMoveAfter(&runQueue[0], AQueueLast(&runQueue[0]), AQueueFirst(&runQueue[0])); //NEED: runQueue is array now
+  AQueueMoveAfter(&runQueue[0], AQueueLast(&runQueue[0]), AQueueFirst(&runQueue[0]));
 
   // Now, run the one at the head of the queue.
-  pcb = (PCB *)AQueueObject(AQueueFirst(&runQueue[0])); //NEED: runQueue is array now
+  pcb = (PCB *)AQueueObject(AQueueFirst(&runQueue[0]));
   currentPCB = pcb;
-  dbprintf ('p',"About to switch to PCB 0x%x,flags=0x%x @ 0x%x\n",
-	    (int)pcb, pcb->flags, (int)(pcb->sysStackPtr[PROCESS_STACK_IAR]));
+  ///////////////////////////////////////////////////////
+  dbprintf ('p',"About to switch to PCB 0x%x,flags=0x%x @ 0x%x\n", (int)currentPCB, currentPCB->flags, (int)(currentPCB->sysStackPtr[PROCESS_STACK_IAR]));
 
 
   // Clean up zombie processes here.  This is done at interrupt time
@@ -333,18 +359,18 @@ void ProcessWakeup (PCB *wakeup) {
     printf("FATAL ERROR: could not remove wakeup PCB from waitQueue in ProcessWakeup!\n");
     exitsim();
   }
-  jiffies_slept = ClkGetCurJiffies() - wakeup->sleep; // Q4
-  // NEED sleep decay
-  // NEED place in correct prio queue
+  // SLEEP DECAY
+  if(wakeup->flag_auto) {
+    jiffies_slept = ClkGetCurJiffies() - wakeup->sleep; // Q4
+    ProcessDecayEstcpuSleep(wakeup, jiffies_slept);
+    wakeup->flag_auto = 0;
+  }
+  // PLACE IN RUNQUEUE
   if ((wakeup->l = AQueueAllocLink(wakeup)) == NULL) {
     printf("FATAL ERROR: could not get link for wakeup PCB in ProcessWakeup!\n");
     exitsim();
   }
-  if (AQueueInsertLast(&runQueue[0], wakeup->l) != QUEUE_SUCCESS) { //NEED: runQueue is array now
-    printf("FATAL ERROR: could not insert link into runQueue in ProcessWakeup!\n");
-    exitsim();
-  }
-  
+  ProcessInsertRunning(wakeup);
 }
 
 
@@ -613,11 +639,11 @@ int ProcessFork (VoidFunc func, uint32 param, int pnice, int pinfo,char *name, i
     printf("FATAL ERROR: could not get link for forked PCB in ProcessFork!\n");
     exitsim();
   }
-  ProcessInsertRunning(pcb);
-  /*if (AQueueInsertLast(&runQueue[0], pcb->l) != QUEUE_SUCCESS) {
+  //ProcessInsertRunning(pcb); // NEED NEED NEED NEED NEED NEED NEED NEED NEED NEED NEED NEED NEED NEED NEED NEED NEED NEED NEED NEED NEED NEED NEED NEED NEED
+  if (AQueueInsertLast(&runQueue[0], pcb->l) != QUEUE_SUCCESS) { // NOT NOT NOT NOT NOT NOT NOT NOT NOT NOT NOT NOT NOT NOT NOT NOT NOT NOT NOT NOT NOT NOT NOT NOT NOT NOT NOT NOT
     printf("FATAL ERROR: could not insert link into runQueue in ProcessFork!\n");
     exitsim();
-  }*/
+  }
   RestoreIntrs (intrs);
 
   // If this is the first process, make it the current one
@@ -735,8 +761,7 @@ ProcessGetCodeInfo (const char *file, uint32 *startAddr,
 //	follows that from the previous line of the file.
 //
 //----------------------------------------------------------------------
-int
-ProcessGetFromFile (int fd, unsigned char *buf, uint32 *addr, int max)
+int ProcessGetFromFile (int fd, unsigned char *buf, uint32 *addr, int max)
 {
   char	localbuf[204];
   int	nbytes;
@@ -1018,12 +1043,13 @@ int GetPidFromAddress(PCB *pcb) {
 }
 
 // Q4,Q5 CHECK
-// NEED initialize the runQueues
-// NEED to increment estcpu each time a process uses a window
-// NEED TO do priority limits for kernel, user, idle
-// NEED to put the runtime calculations somewhere
 void ProcessRecalcPriority(PCB *pcb) { // from lab doc
-  pcb->priority = pcb->base + pcb->estcpu/4 + 2*pcb->pnice;
+  int newPrio = pcb->base + pcb->estcpu/4 + 2*pcb->pnice;
+  int maxPrio = MAX_PRIO;
+  if(pcb->flags & PROCESS_TYPE_SYSTEM) { maxPrio = MAX_KERNEL_PRIO; }
+  else if(pcb->flags & PROCESS_TYPE_USER) { maxPrio = MAX_USER_PRIO; }
+  pcb->priority = (newPrio <= maxPrio) ? ((newPrio >= pcb->base) ? (newPrio) : (pcb->base)) : (maxPrio);
+  if(pcb->base == MAX_PRIO) { pcb->priority = MAX_PRIO; }
 }
 inline int WhichQueue(PCB *pcb) { // from lab doc
   return pcb->priority/PRIORITIES_PER_QUEUE;
@@ -1038,57 +1064,6 @@ void ProcessInsertRunning(PCB *pcb) { // CHECK
     printf("ProcessInsertRunning: failed to insert link last for PCB: %d\n", GetPidFromAddress(pcb));
     exitsim();
   }
-  /*int queue_len = AQueueLength(wQueue);
-  int i = 0;
-  Link* l_i;
-  PCB* pcb_i;
-  if(!queue_len) {
-    if(pcb->l == NULL) {
-      if ((pcb->l = AQueueAllocLink ((void *)pcb)) == NULL) {
-        printf("ProcessInsertRunning: failed to allocate link for PCB: %d\n", GetPidFromAddress(pcb));
-        exitsim();
-      }
-    }
-    if (AQueueInsertFirst(wQueue, pcb->l) != QUEUE_SUCCESS) {
-      printf("ProcessInsertRunning: failed to insert link first for PCB: %d\n", GetPidFromAddress(pcb));
-      exitsim();
-    }
-  }
-  else {
-    l_i = AQueueFirst(wQueue);
-    pcb_i = (PCB*)AQueueObject(l_i);
-    if(pcb->priority > pcb_i->priority) { // if new pcb has highest prio
-      if(pcb->l == NULL) {
-        if ((pcb->l = AQueueAllocLink ((void *)pcb)) == NULL) {
-          printf("ProcessInsertRunning: failed to allocate link for PCB: %d\n", GetPidFromAddress(pcb));
-          exitsim();
-        }
-      }
-      if (AQueueInsertFirst(wQueue, pcb->l) != QUEUE_SUCCESS) {
-        printf("ProcessInsertRunning: failed to insert link first for PCB: %d\n", GetPidFromAddress(pcb));
-        exitsim();
-      }
-    }
-    else {
-      for(i = 0; i < queue_len; i++) { // find correct prio spot
-        if(pcb_i->priority >= pcb->priority) {
-          if(AQueueNext(l_i) != NULL) { l_i = AQueueNext(l_i); }
-          else { break; } // CHECK
-        }
-        pcb_i = (PCB*)AQueueObject(l_i);
-      }
-      if(pcb->l == NULL) {
-        if ((pcb->l = AQueueAllocLink ((void *)pcb)) == NULL) {
-          printf("ProcessInsertRunning: failed to allocate link for PCB: %d\n", GetPidFromAddress(pcb));
-          exitsim();
-        }
-      }
-      if (AQueueInsertAfter(wQueue, l_i, pcb->l) != QUEUE_SUCCESS) {
-        printf("ProcessInsertRunning: failed to insert link after for PCB: %d\n", GetPidFromAddress(pcb));
-        exitsim();
-      }
-    }
-  }*/
 }
 void ProcessDecayEstcpu(PCB *pcb) { // from lab doc
   int load = 1;
@@ -1109,13 +1084,27 @@ void ProcessDecayEstcpuSleep(PCB *pcb, int time_asleep_jiffies) { // from lab do
     pcb->estcpu *= expo_val;
   }
 }
-PCB *ProcessFindHighestPriorityPCB() { // CHECK: why find the highest prioirity pcb and not just the queue?
+Queue *ProcessFindHighestPriorityQueue() {
+  int i = 0;
+  Link* l;
+  Queue* currQueue = NULL;
+  Queue* prioQueue = NULL;
+  for(i = 0; i < NUM_RUN_QUEUES; i++) {
+    currQueue = &runQueue[i];
+    if(AQueueLength(currQueue)) {
+      prioQueue = currQueue;
+      break;
+    }
+  }
+  return prioQueue; // CHECK null check?
+}
+PCB *ProcessFindHighestPriorityPCB() {
   int i = 0;
   int j = 0;
   int qLen = 0;
   Link* l;
-  PCB* currPCB;
-  PCB* prioPCB;
+  PCB* currPCB = NULL;
+  PCB* prioPCB = NULL;
   for(i = 0; i < NUM_RUN_QUEUES; i++) {
     qLen = AQueueLength(&runQueue[i]);
     for(j = 0; j < qLen; j++) {
@@ -1170,42 +1159,37 @@ void ProcessFixRunQueues() { // CHECK
       l_i = AQueueNext(l_i);
     }
   }
-      
-  /*for(i = 0; i < NUM_RUN_QUEUES; i++) { // each queue
-    currQueue = &runQueue[i];
-    queue_len = AQueueLength(currQueue);
-    if(queue_len > 1) { // sort if long enough
-      l_i = AQueueFirst(currQueue);
-      pcb_i = (PCB*)AQueueObject(l_i);
-      if(!ProcessDiffQueue(pcb_i, i)) {
-        // NEED: order queues
-      }
-    } else if(queue_len == 1) { // make sure pcb is in correct prio runqueue
-      l_i = AQueueFirst(currQueue);
-      pcb_i = (PCB*)AQueueObject(l_i);
-      ProcessDiffQueue(pcb_i, i);
-    }
-  }*/
 }
-int ProcessCountAutowake() {
-  int i = 0;
-  int j = 0;
-  Queue* currQueue;
-  int queue_len;
-  Link* l_i;
-  PCB* pcb_i;
-  int autowake_count = 0;
-  for(i = 0; i < NUM_RUN_QUEUES; i++) { // each queue
-    currQueue = &runQueue[i];
-    queue_len = AQueueLength(currQueue);
-    l_i = AQueueFirst(currQueue);
-    for(j = 0; j < queue_len; j++) { // each element in queue
-      pcb_i = (PCB*)AQueueObject(l_i);
-      if(pcb_i->flag_auto) { autowake_count++; }
-      l_i = AQueueNext(l_i);
+void ProcessAutowake() {
+  Queue* waitQ = &waitQueue;
+  PCB* pcb;
+  Link* l = AQueueFirst(waitQ);
+  while(l != NULL) {
+    pcb = (PCB*)AQueueObject(l);
+    if(pcb->flag_auto) {
+      if(pcb->wake >= ClkGetCurJiffies()) {
+        if(AQueueRemove(&(pcb->l)) != QUEUE_SUCCESS) { // CHECK will the pcb_i always have a link here
+          printf("ProcessAutowake: failed to remove from queue\n");
+          exitsim();
+        }
+        pcb->flag_auto = 0;
+        ProcessInsertRunning(pcb);
+      }
     }
   }
-  return autowake_count;
+}
+int ProcessCountAutowake() {
+  Queue* waitQ = &waitQueue;
+  PCB* pcb;
+  Link* l = AQueueFirst(waitQ);
+  int count_autowake = 0;
+  while(l != NULL) {
+    pcb = (PCB*)AQueueObject(l);
+    if(pcb->flag_auto) {
+      count_autowake++;
+    }
+  }
+  return count_autowake;
 }
 void ProcessPrintRunQueues() {
   int i;
