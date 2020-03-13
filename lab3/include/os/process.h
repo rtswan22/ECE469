@@ -117,6 +117,9 @@ void ProcessFixRunQueues();
 int ProcessCountAutowake();
 void ProcessPrintRunQueues();
 
+void ProcessAutowake();
+int ProcessCheckRunQueue();
+
 // Q5
 void ProcessUserSleep(int seconds);
 void ProcessYield();
