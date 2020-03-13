@@ -16,7 +16,7 @@ void main (int argc, char *argv[])
   unsigned int h_mem; //CHECK
   char h_mem_str[10];
   char s_procs_completed_str[10];
-  int pinfo = 1;
+  int pinfo = 0;
 
   // ARGUMENTS
   if (argc != 3) {

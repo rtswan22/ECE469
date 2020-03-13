@@ -105,6 +105,7 @@ int GetPidFromAddress(PCB *pcb);
 #define NUM_RUN_QUEUES 32
 #define PRIORITIES_PER_QUEUE 4
 #define NUM_JIFFIES_TIL_DECAY 100
+#define NUM_WINDOWS_TIL_DECAY 10
 void ProcessRecalcPriority(PCB *pcb);
 inline int WhichQueue(PCB *pcb);
 void ProcessInsertRunning(PCB *pcb);
@@ -122,5 +123,6 @@ int ProcessCheckRunQueue();
 // Q5
 void ProcessUserSleep(int seconds);
 void ProcessYield();
+void ProcessForkIdle();
 
 #endif	/* __process_h__ */
