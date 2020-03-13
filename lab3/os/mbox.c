@@ -334,36 +334,36 @@ int MboxCloseAllByPid(int pid) {
 //if not mark not in use. 
   for (i = 0; i < MBOX_NUM_MBOXES; i++) {
     //use lock
-    if(LockHandleAcquire(mboxes[i].lock) == SYNC_FAIL) {
-      printf("Mbox Close All By Pid did not successfully acquire the lock\n");
-      return MBOX_FAIL;
-    }
-
-    numprocs = 0;
     if(mboxes[i].procs[pid] == 1) {
-      mboxes[i].procs[pid] = 0;
-
-      for(j = 0; j < PROCESS_MAX_PROCS; j++) {
-        if(mboxes[i].procs[j] == 1) {
-          numprocs++;
-        }
+      if(LockHandleAcquire(mboxes[i].lock) == SYNC_FAIL) {
+        printf("Mbox Close All By Pid did not successfully acquire the lock\n");
+        return MBOX_FAIL;
       }
-      if(numprocs == 0) {
-        while(AQueueEmpty(&mboxes[i].msg_queue) != 0){ //CHECK: yes or no?
-          l = AQueueFirst(&mboxes[i].msg_queue);
-          if((AQueueRemove(&l) != QUEUE_SUCCESS)) {
-            printf("MboxClose: could not AQueueRemove link\n");
-            return MBOX_FAIL;
+
+      numprocs = 0;
+        mboxes[i].procs[pid] = 0;
+
+        for(j = 0; j < PROCESS_MAX_PROCS; j++) {
+          if(mboxes[i].procs[j] == 1) {
+            numprocs++;
           }
         }
-        mboxes[i].inuse = 0;
-      }
+        if(numprocs == 0) {
+          while(AQueueEmpty(&mboxes[i].msg_queue) != 0){ //CHECK: yes or no?
+            l = AQueueFirst(&mboxes[i].msg_queue);
+            if((AQueueRemove(&l) != QUEUE_SUCCESS)) {
+              printf("MboxClose: could not AQueueRemove link\n");
+              return MBOX_FAIL;
+            }
+          }
+          mboxes[i].inuse = 0;
+        }
 
-    }
-    //release lock
-    if(LockHandleRelease(mboxes[i].lock) == SYNC_FAIL) {
-      printf("Mbox Close All By Pid did not successfully release the lock\n");
-      return MBOX_FAIL;
+      //release lock
+      if(LockHandleRelease(mboxes[i].lock) == SYNC_FAIL) {
+        printf("Mbox Close All By Pid did not successfully release the lock\n");
+        return MBOX_FAIL;
+      }
     }
   }
 
