@@ -1,7 +1,7 @@
 cd ../../bin; dlxsim -x os.dlx.obj -a  -u makeprocs.dlx.obj 3; ee469_fixterminal
-Stack=0x1fffc8, pc starting at 0x1281c
+Stack=0x1fffc8, pc starting at 0x12ab8
 Got 3 arguments.
-Available memory: 0x22700 -> 0x200000.
+Available memory: 0x236f0 -> 0x200000.
 Argument count is 3.
 Argument 0 is -u.
 Argument 1 is makeprocs.dlx.obj.
@@ -18,71 +18,71 @@ spawn_me (28): B1
 spawn_me (29): A2
 spawn_me (28): B2
 spawn_me (29): A3
-spawn_me (29): A4
 spawn_me (28): B3
 spawn_me (27): C1
-spawn_me (29): A5
+spawn_me (29): A4
 spawn_me (28): B4
-spawn_me (29): A6
-spawn_me (29): A7
+spawn_me (29): A5
 spawn_me (28): B5
-spawn_me (29): A8
+spawn_me (29): A6
 spawn_me (28): B6
-spawn_me (29): A9
+spawn_me (29): A7
 spawn_me (28): B7
-spawn_me (29): A10
-spawn_me (29): A11
-spawn_me (28): B8
 spawn_me (27): C2
-spawn_me (29): A12
+spawn_me (29): A8
+spawn_me (28): B8
+spawn_me (29): A9
+spawn_me (29): A10
 spawn_me (28): B9
-spawn_me (29): A13
-spawn_me (29): A14
+spawn_me (29): A11
 spawn_me (28): B10
-spawn_me (29): A15
+spawn_me (29): A12
 spawn_me (28): B11
-spawn_me (29): A16
-spawn_me (28): B12
-spawn_me (29): A17
 spawn_me (27): C3
+spawn_me (29): A13
+spawn_me (28): B12
+spawn_me (29): A14
 spawn_me (28): B13
-spawn_me (29): A18
-spawn_me (29): A19
+spawn_me (29): A15
 spawn_me (28): B14
-spawn_me (29): A20
+spawn_me (29): A16
 spawn_me (28): B15
-spawn_me (29): A21
-spawn_me (29): A22
-spawn_me (28): B16
-spawn_me (29): A23
-spawn_me (28): B17
 spawn_me (27): C4
-spawn_me (29): A24
+spawn_me (29): A17
+spawn_me (28): B16
+spawn_me (29): A18
+spawn_me (28): B17
+spawn_me (29): A19
 spawn_me (28): B18
-spawn_me (29): A25
-spawn_me (29): A26
+spawn_me (29): A20
 spawn_me (28): B19
-spawn_me (29): A27
-spawn_me (28): B20
-spawn_me (29): A28
-spawn_me (29): A29
-spawn_me (28): B21
-spawn_me (29): Done!
 spawn_me (27): C5
+spawn_me (29): A21
+spawn_me (28): B20
+spawn_me (29): A22
+spawn_me (28): B21
+spawn_me (29): A23
 spawn_me (28): B22
+spawn_me (29): A24
 spawn_me (28): B23
 spawn_me (27): C6
+spawn_me (29): A25
 spawn_me (28): B24
-spawn_me (27): C7
+spawn_me (29): A26
 spawn_me (28): B25
+spawn_me (29): A27
 spawn_me (28): B26
-spawn_me (27): C8
+spawn_me (29): A28
 spawn_me (28): B27
-spawn_me (27): C9
+spawn_me (29): A29
+spawn_me (27): C7
 spawn_me (28): B28
+spawn_me (29): Done!
 spawn_me (28): B29
-spawn_me (27): C10
+spawn_me (27): C8
 spawn_me (28): Done!
+spawn_me (27): C9
+spawn_me (27): C10
 spawn_me (27): C11
 spawn_me (27): C12
 spawn_me (27): C13
@@ -106,7 +106,7 @@ spawn_me (27): Done!
 makeprocs (31): All other processes completed, exiting main process.
 No runnable processes - exiting!
 Exiting at program request.
-Instructions executed: 38951307
-Time simulated: 38.951 secs
-Real time elapsed: 1.767 secs
-Execution rate: 22.04M simulated instructions per real second.
+Instructions executed: 40482557
+Time simulated: 40.483 secs
+Real time elapsed: 1.839 secs
+Execution rate: 22.02M simulated instructions per real second.
