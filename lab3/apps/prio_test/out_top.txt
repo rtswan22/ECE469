@@ -1,7 +1,7 @@
 cd ../../bin; dlxsim -x os.dlx.obj -a  -u makeprocs.dlx.obj 3; ee469_fixterminal
-Stack=0x1fffc8, pc starting at 0x1281c
+Stack=0x1fffc8, pc starting at 0x12880
 Got 3 arguments.
-Available memory: 0x22700 -> 0x200000.
+Available memory: 0x22670 -> 0x200000.
 Argument count is 3.
 Argument 0 is -u.
 Argument 1 is makeprocs.dlx.obj.
@@ -106,7 +106,7 @@ spawn_me (27): Done!
 makeprocs (31): All other processes completed, exiting main process.
 No runnable processes - exiting!
 Exiting at program request.
-Instructions executed: 38951307
-Time simulated: 38.951 secs
-Real time elapsed: 1.767 secs
-Execution rate: 22.04M simulated instructions per real second.
+Instructions executed: 39040257
+Time simulated: 39.040 secs
+Real time elapsed: 1.799 secs
+Execution rate: 21.70M simulated instructions per real second.
