@@ -201,10 +201,8 @@ void ProcessSchedule () {
   int i=0;
   Link *l=NULL;
   PCB* hpPCB = NULL;
-  //printf("SCHEDSTART: %d\n", ClkGetCurJiffies());
   // RUNTIME
-  //if(jiffiesDecayTime==NUM_JIFFIES_TIL_DECAY) jiffiesDecayTime+=ClkGetCurJiffies(); // CHECK: should this be here or does the process run in the time before the first schedule?
-  currentPCB->jiffies += ClkGetCurJiffies() - currentPCB->switched; // Q3: time // CHECK: needs to account for when it is entering from other areas?? such as process yield and sleep
+  currentPCB->jiffies += ClkGetCurJiffies() - currentPCB->switched; // Q3: time
 
   dbprintf ('p', "Now entering ProcessSchedule (cur=0x%x, %d ready)\n", (int)currentPCB, AQueueLength((currentPCB->l)->queue));
   // PINFO
@@ -242,25 +240,19 @@ void ProcessSchedule () {
   }
   // DECAY
   if(ClkGetCurJiffies() > jiffiesDecayTime) {
-    //printf("SCHED DECAY: %d\n", ClkGetCurJiffies());
-    //printf("DECAYING\n"); // NOT
     ProcessDecayAllEstcpus();
     ProcessFixRunQueues();
-    jiffiesDecayTime = NUM_JIFFIES_TIL_DECAY + ClkGetCurJiffies(); // CHECK
+    jiffiesDecayTime = NUM_JIFFIES_TIL_DECAY + ClkGetCurJiffies();
   }
   // WAKEUP SLEEPING
   ProcessAutowake();
   // SET PCB
-  hpPCB = ProcessFindHighestPriorityPCB(); // CHECK:
-  if(currentPCB == hpPCB) { // CHECK: why is this needed
-    //printf("currentPCB == hpPCB\n"); //NOT
-    //ProcessPrintSmall(); //NOT
+  hpPCB = ProcessFindHighestPriorityPCB();
+  if(currentPCB == hpPCB) {
     ProcessInsertRunning(currentPCB);
     hpPCB = ProcessFindHighestPriorityPCB();
   }
-  //ProcessPrintSmall(); //NOT
   currentPCB = hpPCB;
-  //printf("RUN: %d\n", GetPidFromAddress(currentPCB)); // NOT
   ///////////////////////////////////////////////////////
 
   dbprintf ('p',"About to switch to PCB 0x%x,flags=0x%x @ 0x%x\n", (int)currentPCB, currentPCB->flags, (int)(currentPCB->sysStackPtr[PROCESS_STACK_IAR]));
@@ -278,7 +270,6 @@ void ProcessSchedule () {
   }
   dbprintf ('p', "Leaving ProcessSchedule (cur=0x%x)\n", (int)currentPCB);
   currentPCB->switched = ClkGetCurJiffies(); // Q3: time
-  //printf("RUNNING: %d\n", GetPidFromAddress(currentPCB)); // not
 }
 
 //----------------------------------------------------------------------
@@ -933,7 +924,7 @@ void main (int argc, char *argv[])
 
   // Start the clock which will in turn trigger periodic ProcessSchedule's
   ProcessForkIdle();
-  jiffiesDecayTime = NUM_JIFFIES_TIL_DECAY; // CHECK 
+  jiffiesDecayTime = NUM_JIFFIES_TIL_DECAY;
   ClkStart();
   intrreturn ();
   // Should never be called because the scheduler exits when there
@@ -1003,7 +994,7 @@ int GetPidFromAddress(PCB *pcb) {
   return (int)(pcb - pcbs);
 }
 
-// Q4,Q5 CHECK
+// Q4,Q5
 void ProcessRecalcPriority(PCB *pcb) { // from lab doc
   int newPrio = pcb->base + pcb->estcpu/4.0 + 2*pcb->pnice;
   int maxPrio = MAX_PRIO;
@@ -1015,7 +1006,7 @@ void ProcessRecalcPriority(PCB *pcb) { // from lab doc
 inline int WhichQueue(PCB *pcb) { // from lab doc
   return pcb->priority/PRIORITIES_PER_QUEUE;
 }
-void ProcessInsertRunning(PCB *pcb) { // CHECK:
+void ProcessInsertRunning(PCB *pcb) {
   Queue* wQueue = &runQueue[WhichQueue(pcb)];
   if(pcb->l != NULL) {
     if (AQueueRemove(&(pcb->l)) != QUEUE_SUCCESS) {
@@ -1141,32 +1132,12 @@ int ProcessCountAutowake() {
   }
   return count_autowake;
 }
-void ProcessPrintRunQueues() { //CHECK
+void ProcessPrintRunQueues() {
   int i;
   Link* l;
   PCB* pcb;
   printf("Printing run queues....\n");
   for(i = 0; i < NUM_RUN_QUEUES; i++) {
-    printf("runQueue[%d]: ", i);
-    if(AQueueEmpty(&runQueue[i])) { printf("EMPTY\n"); }
-    else {
-      l = AQueueFirst(&runQueue[i]);
-      while (l != NULL) {
-        pcb = (PCB*)AQueueObject(l);
-        printf("%d[%d], ", GetPidFromAddress(pcb), pcb->priority);
-        l = AQueueNext(l);
-      }
-      printf("\n");
-    }
-  }
-  printf("Finished run queues printing.\n");
-}
-void ProcessPrintSmall() { //NOT
-  int i;
-  Link* l;
-  PCB* pcb;
-  printf("Printing run queues....\n");
-  for(i = 12; i < 16; i++) {
     printf("runQueue[%d]: ", i);
     if(AQueueEmpty(&runQueue[i])) { printf("EMPTY\n"); }
     else {
