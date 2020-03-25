@@ -117,8 +117,6 @@ void ProcessFixRunQueues();
 int ProcessCountAutowake();
 void ProcessPrintRunQueues();
 
-void ProcessPrintSmall(); //NOT
-
 int ProcessAutowake();
 int ProcessCheckRunQueue();
 
