@@ -12,7 +12,7 @@
 #include "queue.h"
 
 // num_pages = size_of_memory / size_of_one_page
-static uint32 freemap[/*size*/];
+static uint32 freemap[MEM_FREEMAP_SIZE];
 static uint32 pagestart;
 static int nfreepages;
 static int freemapmax;
@@ -32,37 +32,6 @@ static inline uint32 invert (uint32 n) {
   return (n ^ negativeone);
 }
 
-
-MemoryAllocPage ()
-{
-  static int	mapnum = 0;
-  uint32		bitnum;
-  uint32	v;
- 
-  
-
-  if (nfreepages == 0) {
-    dbprintf('m', "Memory Alloc Page: no available pages")
-    return MEM_FAIL;
-  }
-  dbprintf ('m', "MemoryAllocPage, starting with page %d\n", mapnum);
-  while (freepages[mapnum] == 0) {
-    mapnum += 1;
-    if (mapnum >= freemapmax) {
-      mapnum = 0;
-    }
-  }
-  v = freepages[mapnum];
-  for (bitnum = 0; (v & (1 << bitnum)) == 0; bitnum++) {
-  }
-  freepages[mapnum] &= invert(1 << bitnum);
-  v = (mapnum * 32) + bitnum;
-  dbprintf ('m', "MemoryAllocPage, from map %d, page %d, map=0x%x.\n",
-	    mapnum, v, freepages[mapnum]);
-  nfreepages -= 1;
-  return (v);
-
-
 //----------------------------------------------------------------------
 //
 //	MemoryGetSize
@@ -76,12 +45,6 @@ int MemoryGetSize() {
 }
 
 void
-MemoryFreePage(uint32 page)
-{
-  MemorySetFreemap (page, 1);
-  nfreepages += 1;
-  dbprintf ('m',"Freed page 0x%x, %d remaining.\n", page, nfreepages);
-}
 //----------------------------------------------------------------------
 //
 //	MemoryModuleInit
@@ -224,29 +187,25 @@ int MemoryPageFaultHandler(PCB *pcb) {
 //---------------------------------------------------------------------
 
 int MemoryAllocPage(void) {
-  static int	mapnum = 0;
-  uint32		bitnum;
-  uint32	v;
+  static int pagenum = 0;
+  uint32 bitnum = 0;
+  uint32 pageint;
 
-  if (nfreepages == 0) {
-    return (0);
+  if (nfreepages == 0) { // CHECK: should it fail or get a new page?
+    return MEM_FAIL;
   }
-  dbprintf ('m', "Allocating memory, starting with page %d\n", mapnum);
-  while (freepages[mapnum] == 0) {
-    mapnum += 1;
-    if (mapnum >= freemapmax) {
-      mapnum = 0;
-    }
+  dbprintf ('m', "Allocating memory, starting with page %d\n", pagenum);
+  while(freemap[pagenum] == 0) {
+    pagenum += 1;
   }
-  v = freepages[mapnum];
-  for (bitnum = 0; (v & (1 << bitnum)) == 0; bitnum++) {
-  }
-  freepages[mapnum] &= invert(1 << bitnum);
-  v = (mapnum * 32) + bitnum;
+  pageint = freemap[pagenum];
+  while((pageint & (1 << bitnum)) == 0) { bitnum += 1; }
+  MemorySetFreemap(page, 0);
+  pageint = (pagenum * 32) + bitnum;
   dbprintf ('m', "Allocated memory, from map %d, page %d, map=0x%x.\n",
-	    mapnum, v, freepages[mapnum]);
+	    pagenum, pageint, freemap[pagenum]);
   nfreepages -= 1;
-  return (v);
+  return (pageint);
 }
 
 
@@ -261,3 +220,15 @@ void MemoryFreePage(uint32 page) {
   dbprintf ('m',"Freed page 0x%x, %d remaining.\n", page, nfreepages);
 }
 
+//----------------------------------------------------------------------
+//	MemorySetFreemap
+//----------------------------------------------------------------------
+inline void MemorySetFreemap(int p, int b)
+{
+  uint32	wd = p / 32;
+  uint32	bitnum = p % 32;
+
+  freemap[wd] = (freemap[wd] & invert(1 << bitnum)) | (b << bitnum);
+  dbprintf ('m', "Set freemap entry %d to 0x%x.\n",
+	    wd, freemap[wd]);
+}
