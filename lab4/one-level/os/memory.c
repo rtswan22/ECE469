@@ -32,6 +32,37 @@ static inline uint32 invert (uint32 n) {
   return (n ^ negativeone);
 }
 
+
+MemoryAllocPage ()
+{
+  static int	mapnum = 0;
+  uint32		bitnum;
+  uint32	v;
+ 
+  
+
+  if (nfreepages == 0) {
+    dbprintf('m', "Memory Alloc Page: no available pages")
+    return MEM_FAIL;
+  }
+  dbprintf ('m', "MemoryAllocPage, starting with page %d\n", mapnum);
+  while (freepages[mapnum] == 0) {
+    mapnum += 1;
+    if (mapnum >= freemapmax) {
+      mapnum = 0;
+    }
+  }
+  v = freepages[mapnum];
+  for (bitnum = 0; (v & (1 << bitnum)) == 0; bitnum++) {
+  }
+  freepages[mapnum] &= invert(1 << bitnum);
+  v = (mapnum * 32) + bitnum;
+  dbprintf ('m', "MemoryAllocPage, from map %d, page %d, map=0x%x.\n",
+	    mapnum, v, freepages[mapnum]);
+  nfreepages -= 1;
+  return (v);
+
+
 //----------------------------------------------------------------------
 //
 //	MemoryGetSize
@@ -44,7 +75,13 @@ int MemoryGetSize() {
   return (*((int *)DLX_MEMSIZE_ADDRESS));
 }
 
-
+void
+MemoryFreePage(uint32 page)
+{
+  MemorySetFreemap (page, 1);
+  nfreepages += 1;
+  dbprintf ('m',"Freed page 0x%x, %d remaining.\n", page, nfreepages);
+}
 //----------------------------------------------------------------------
 //
 //	MemoryModuleInit
@@ -68,7 +105,16 @@ void MemoryModuleInit() {
 //
 //----------------------------------------------------------------------
 uint32 MemoryTranslateUserToSystem (PCB *pcb, uint32 addr) {
+ int	page = addr / MEM_PAGESIZE;
+    int offset = addr % MEM_PAGESIZE;
+
+    if (page > pcb->npages) {
+      return (0);
+    }
+    return ((pcb->pagetable[page] & MEMORY_PTE_MASK) + offset);
 }
+
+
 
 
 //----------------------------------------------------------------------
@@ -178,15 +224,40 @@ int MemoryPageFaultHandler(PCB *pcb) {
 //---------------------------------------------------------------------
 
 int MemoryAllocPage(void) {
-  return -1;
+  static int	mapnum = 0;
+  uint32		bitnum;
+  uint32	v;
+
+  if (nfreepages == 0) {
+    return (0);
+  }
+  dbprintf ('m', "Allocating memory, starting with page %d\n", mapnum);
+  while (freepages[mapnum] == 0) {
+    mapnum += 1;
+    if (mapnum >= freemapmax) {
+      mapnum = 0;
+    }
+  }
+  v = freepages[mapnum];
+  for (bitnum = 0; (v & (1 << bitnum)) == 0; bitnum++) {
+  }
+  freepages[mapnum] &= invert(1 << bitnum);
+  v = (mapnum * 32) + bitnum;
+  dbprintf ('m', "Allocated memory, from map %d, page %d, map=0x%x.\n",
+	    mapnum, v, freepages[mapnum]);
+  nfreepages -= 1;
+  return (v);
 }
 
 
 uint32 MemorySetupPte (uint32 page) {
-  return -1;
+ return ((page * MEM_PAGESIZE) | MEM_PTE_VALID);
 }
 
 
 void MemoryFreePage(uint32 page) {
+ MemorySetFreemap (page, 1);
+  nfreepages += 1;
+  dbprintf ('m',"Freed page 0x%x, %d remaining.\n", page, nfreepages);
 }
 
