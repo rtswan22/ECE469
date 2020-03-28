@@ -56,7 +56,31 @@ void
 //
 //----------------------------------------------------------------------
 void MemoryModuleInit() {
+
+  int		i;
+  int		maxpage = MemoryGetSize () / MEMORY_PAGESIZE;
+  int		curpage;
+  
+  dbprintf('m', "MemoryModuleInit:  begin");
+
+  pagestart = (lastosaddress + MEMORY_PAGE_SIZE - 4) / MEMORY_PAGESIZE; //CHECK: not sure this is correct way to initiliaze this
+  freemapmax = (maxpage+31) / 32;
+  dbprintf ('m', "Map has %d entries, memory size is 0x%x.\n",
+	    freemapmax, maxpage);
+  dbprintf ('m', "Free pages start with page # 0x%x.\n", pagestart);
+  for (i = 0; i < freemapmax; i++) {
+    // Initially, all pages are considered in use.  This is done to make
+    // sure we don't have any partially initialized freemap entries.
+    freemap[i] = 0;
+  }
+  nfreepages = 0; //CHECK: not sure this is the way to initialize this
+  for (curpage = pagestart; curpage < maxpage; curpage++) {
+    nfreepages += 1;
+    MemorySetFreemap (curpage, 1);
+  }
+  dbprintf ('m', "Initialized %d free pages.\n", nfreepages);
 }
+
 
 
 //----------------------------------------------------------------------
