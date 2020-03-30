@@ -138,16 +138,13 @@ void ProcessFreeResources (PCB *pcb) {
 
   //------------------------------------------------------------
   // STUDENT: Free any memory resources on process death here.
-  //------------------------------------------------------------
-   //CHECK: Not sure if this is the right idea
-   
-   /*for (i = 0; i < MEM_L1TABLE_SIZE; i++) {
-    
-      MemoryFreePage(pcb->pagetable[i]/MEM_PAGESIZE);
-      pcb->pagetable[i] &= MEM_PTE_MASK;
-    
-  }*/
-
+  //------------------------------------------------------------  
+   for (i = 0; i < MEM_L1TABLE_SIZE; i++) { //CHECK: in general? and heap free?
+     if(pcb->pagetable[i] & MEM_PTE_VALID) {
+       MemoryFreePage(pcb->pagetable[i]/MEM_PAGESIZE);
+       pcb->pagetable[i] &= MEM_PTE_MASK;
+     }
+   }
 
   ProcessSetStatus (pcb, PROCESS_STATUS_FREE);
 }

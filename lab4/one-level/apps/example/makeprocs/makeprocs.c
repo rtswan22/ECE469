@@ -1,46 +1,98 @@
 #include "usertraps.h"
 #include "misc.h"
 
-#define HELLO_WORLD "hello_world.dlx.obj"
+#define TEST2_1 "test2_1.dlx.obj"
+#define TEST2_2 "test2_2.dlx.obj"
+#define TEST2_3 "test2_3.dlx.obj"
+#define TEST2_4 "test2_4.dlx.obj"
+#define TEST2_6 "test2_6.dlx.obj"
 
+sem_t sem;
+char sem_str[10];
+void semCREATE(int count) {
+  if ((sem = sem_create(1 - count)) == SYNC_FAIL) {
+    Printf("makeprocs (%d): Bad sem_create\n", getpid());
+    Exit();
+  }
+}
+
+void run_test2_1() {
+  semCREATE(1);
+  ditoa(sem, sem_str);
+  process_create(TEST2_1, sem_str, NULL);
+}
+void run_test2_2() {
+  semCREATE(1);
+  ditoa(sem, sem_str);
+  process_create(TEST2_2, sem_str, NULL);
+}
+void run_test2_3() {
+  semCREATE(1);
+  ditoa(sem, sem_str);
+  process_create(TEST2_3, sem_str, NULL);
+}
+void run_test2_4() {
+  semCREATE(1);
+  ditoa(sem, sem_str);
+  process_create(TEST2_4, sem_str, NULL);
+}
+void run_test2_5() {
+  int i = 0;
+  semCREATE(100);
+  ditoa(sem, sem_str);
+  for(i = 0; i < 100; i++) process_create(TEST2_1, sem_str, NULL);
+}
+void run_test2_6() {
+  int i = 0;
+  semCREATE(30);
+  ditoa(sem, sem_str);
+  for(i = 0; i < 30; i++) process_create(TEST2_6, sem_str, NULL);
+}
+
+// CHECK: should this just run up to number 6 of the test programs based on what the given number is or what?
 void main (int argc, char *argv[])
 {
-  int num_hello_world = 0;             // Used to store number of processes to create
+  int test_count = 0;             // Used to store number of processes to create
+  int proc_count = 0;
   int i;                               // Loop index variable
-  sem_t s_procs_completed;             // Semaphore used to wait until all spawned processes have completed
-  char s_procs_completed_str[10];      // Used as command-line argument to pass page_mapped handle to new processes
 
   if (argc != 2) {
     Printf("Usage: %s <number of hello world processes to create>\n", argv[0]);
     Exit();
   }
 
-  // Convert string from ascii command line argument to integer number
-  num_hello_world = dstrtol(argv[1], NULL, 10); // the "10" means base 10
-  Printf("makeprocs (%d): Creating %d hello_world processes\n", getpid(), num_hello_world);
-
-  // Create semaphore to not exit this process until all other processes 
-  // have signalled that they are complete.
-  if ((s_procs_completed = sem_create(0)) == SYNC_FAIL) {
-    Printf("makeprocs (%d): Bad sem_create\n", getpid());
+  // TEST COUNT
+  test_count = dstrtol(argv[1], NULL, 10); // the "10" means base 10
+  if(test_count < 1 || test_count > 6) {
+    Printf("makeprocs (%d): Exiting, argv[1] must be >= 1 and <= 6, argv[1] == %d\n", getpid(), test_count);
     Exit();
   }
 
-  // Setup the command-line arguments for the new processes.  We're going to
-  // pass the handles to the semaphore as strings
-  // on the command line, so we must first convert them from ints to strings.
-  ditoa(s_procs_completed, s_procs_completed_str);
-
-  // Create Hello World processes
-  Printf("-------------------------------------------------------------------------------------\n");
-  Printf("makeprocs (%d): Creating %d hello world's in a row, but only one runs at a time\n", getpid(), num_hello_world);
-  for(i=0; i<num_hello_world; i++) {
-    Printf("makeprocs (%d): Creating hello world #%d\n", getpid(), i);
-    process_create(HELLO_WORLD, s_procs_completed_str, NULL);
-    if (sem_wait(s_procs_completed) != SYNC_SUCCESS) {
-      Printf("Bad semaphore s_procs_completed (%d) in %s\n", s_procs_completed, argv[0]);
+  // PROCESSES
+  for(i=1; i<=test_count; i++) {
+    Printf("-------------------------------------------------------------------------------------\n");
+    Printf("makeprocs (%d): test2_%d CREATE\n", getpid(), i);
+    switch(i)
+    {
+      case 1: run_test2_1();
+              break;
+      case 2: run_test2_2();
+              break;
+      case 3: run_test2_3();
+              break;
+      case 4: run_test2_4();
+              break;
+      case 5: run_test2_5();
+              break;
+      case 6: run_test2_6();
+              break;
+      default: Printf("makeprocs (%d): invalid test number %d\n", getpid(), i);
+    }
+    if (sem_wait(sem) != SYNC_SUCCESS) {
+      Printf("makeprocs (%d): Bad sem (%d) for test2_%d\n", getpid(), sem, i);
       Exit();
     }
+    Printf("makeprocs (%d): test2_%d DONE\n", getpid(), i);
   }
 
   Printf("-------------------------------------------------------------------------------------\n");

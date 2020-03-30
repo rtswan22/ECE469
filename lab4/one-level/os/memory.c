@@ -57,13 +57,13 @@ int MemoryGetSize() {
 void MemoryModuleInit() {
 
   int	i;
-  int maxpage = MemoryGetSize() / MEM_PAGESIZE;
+  int maxpage = MEM_MAX_PHYS_MEM / MEM_PAGESIZE;
   int	curpage;
   
   dbprintf('m', "MemoryModuleInit:  begin");
 
-  pagestart = (lastosaddress + MEM_PAGESIZE - 4) / MEM_PAGESIZE; //CHECK: not sure this is correct way to initiliaze this
-  freemapmax = (maxpage+31) / 32;
+  pagestart = (lastosaddress + MEM_PAGESIZE - 4) / MEM_PAGESIZE;
+  freemapmax = MEM_MAX_PHYS_MEM / MEM_PAGESIZE;
   dbprintf ('m', "Map has %d entries, memory size is 0x%x.\n", freemapmax, maxpage);
   dbprintf ('m', "Free pages start with page # 0x%x.\n", pagestart);
   for (i = 0; i < freemapmax; i++) {
@@ -92,18 +92,17 @@ void MemoryModuleInit() {
 uint32 MemoryTranslateUserToSystem (PCB *pcb, uint32 addr) {
   int	page = addr / MEM_PAGESIZE;
   int offset = addr % MEM_PAGESIZE;
-  if(page > pcb->npages) {
-    return (0); // CHECK: or should it go to fault handler? or what?
-  }
   
   if(addr > MEM_MAX_VIRTUAL_ADDRESS) { // if address over max
-    // NEED: then what? kill and return 0?
+    printf("MemoryTranslateUserToSystem: Addr exceeded max, PCB %d\n", GetPidFromAddress(currentPCB)); // CHECK: dbprintf instead?
+    ProcessKill();
+    return 0;
   }
   if((pcb->pagetable[page] & MEM_PTE_VALID) == 0) { // if invalid page
     pcb->currentSavedFrame = addr;
     if(MemoryPageFaultHandler(pcb) == MEM_FAIL) {
-      printf("MemoryTranslateUserToSystem: Failed to handle pagefault\n"); // CHECK: dbprintf instead?
-      return 0; // CHECK: return what?
+      printf("MemoryTranslateUserToSystem: Failed to handle pagefault, PCB %d\n", GetPidFromAddress(currentPCB)); // CHECK: dbprintf instead?
+      return 0;
     }
   }
   return ((pcb->pagetable[page] & MEMORY_PTE_MASK) + offset);
@@ -208,19 +207,19 @@ int MemoryCopyUserToSystem (PCB *pcb, unsigned char *from,unsigned char *to, int
 // Note: The existing code is incomplete and only for reference. 
 // Feel free to edit.
 //---------------------------------------------------------------------
-int MemoryPageFaultHandler(PCB *pcb) { // CHECK: in general
+int MemoryPageFaultHandler(PCB *pcb) {
   // faddr: fault address
   // usaddr: user stack addr
-  uint32 faddr = pcb->currentSavedFrame;
-  uint32 usaddr = *(volatile uint32*)(pcb->pagetable[0] & MEMORY_PTE_MASK); // NEED: is it the value at addr zero of the pcb virtual?? 
+  uint32 faddr = pcb->currentSavedFrame[PROCESS_STACK_FAULT]; // CHECK: is this correct 
+  uint32 usaddr = pcb->currentSavedFrame[PROCESS_STACK_USER_STACKPOINTER]; // CHECK: is this correct 
   uint32 fpage = faddr / MEM_PAGESIZE;
   uint32 uspage = usaddr / MEM_PAGESIZE;
   if(faddr < usaddr) { // CHECK: anything else needed inside?
     printf("SEGFAULT: PCB %d, vaddr %d\n", GetPidFromAddress(pcb), faddr);
-    ProcessKill(); // CHECK: does this need to be passed the PCB or will it always be current? and does it free the pages??
+    ProcessKill();
     return MEM_FAIL;
   }
-  else {
+  else { // CHECK: should stack pointer change?
     // allocate page, setup pte, insert to table
     pcb->pagetable[fpage] = MemorySetupPte(MemoryAllocPage());
     pcb->npages += 1;
@@ -238,8 +237,9 @@ int MemoryAllocPage() {
   uint32 bitnum = 0;
   uint32 pageint;
 
-  if (nfreepages == 0) { // CHECK: should it fail or reallocate a page?
-    return MEM_FAIL;
+  if (nfreepages == 0) { // CHECK: should it fail or reallocate a page or kill? print no available pages and return 0
+    printf("MemoryAllocPage: no free pages available\n");
+    return 0;
   }
   dbprintf ('m', "Allocating memory, starting with page %d\n", pagenum);
   while(freemap[pagenum] == 0) {
