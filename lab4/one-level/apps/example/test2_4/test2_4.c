@@ -1,14 +1,13 @@
 #include "usertraps.h"
 #include "misc.h"
-#include "os/memory_constants.h"
 
 int grow(int n) {
   //int top = 0;
   if (n == 0) {
     return 0;
   }
-  Printf("Part2 Test4 (%d): Grow Stack %d times\n", getpid(), n);
- return(grow(n-1)+1);
+  //Printf("Part2 Test4 (%d): Grow Stack %d times\n", getpid(), n);
+  return(grow(n-1)+1);
 }
 
 void main (int argc, char *argv[])
@@ -23,7 +22,7 @@ void main (int argc, char *argv[])
 
   // Convert the command-line strings into integers for use as handles
   s_procs_completed = dstrtol(argv[1], NULL, 10);
-  grow_out = grow(2500);
+  grow_out = grow(278);
   // Now print a message to show that everything worked
   Printf("Part2 Test4 (%d): Grow Stack!\n", getpid());
 

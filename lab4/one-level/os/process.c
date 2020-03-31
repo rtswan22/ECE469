@@ -86,9 +86,9 @@ void ProcessModuleInit () {
     //-------------------------------------------------------
     // STUDENT: Initialize the PCB's page table here.
     //-------------------------------------------------------
-      for(j = 0; j < MEM_L1TABLE_SIZE; j++){
-        pcbs[i].pagetable[j] = 0;
-      }
+    for(j = 0; j < MEM_L1TABLE_SIZE; j++){
+      pcbs[i].pagetable[j] = 0;
+    }
     // Finally, insert the link into the queue
     if (AQueueInsertFirst(&freepcbs, pcbs[i].l) != QUEUE_SUCCESS) {
       printf("FATAL ERROR: could not insert PCB link into queue in ProcessModuleInit!\n");
@@ -141,6 +141,8 @@ void ProcessFreeResources (PCB *pcb) {
   //------------------------------------------------------------  
    for (i = 0; i < MEM_L1TABLE_SIZE; i++) { //CHECK: in general? and heap free?
      if(pcb->pagetable[i] & MEM_PTE_VALID) {
+       //printf("pte %d: %08x... physical page: %d\n", i, pcb->pagetable[i], pcb->pagetable[i]/MEM_PAGESIZE); // NOT:
+       //printf("ProcessFreeResources for pcb %d: freeing page %d\n", GetPidFromAddress(pcb), pcb->pagetable[i]/MEM_PAGESIZE); // NOT
        MemoryFreePage(pcb->pagetable[i]/MEM_PAGESIZE);
        pcb->pagetable[i] &= MEM_PTE_MASK;
      }
@@ -430,9 +432,9 @@ int ProcessFork (VoidFunc func, uint32 param, char *name, int isUser) {
     if (alloc_page == MEM_FAIL){
       printf("MemoryAllocPage() Fail for pagetable%d\n", i);
 	    exitsim();
-  }
-
-	pcb->pagetable[i] = MemorySetupPte(alloc_page);
+    }
+	  pcb->pagetable[i] = MemorySetupPte(alloc_page);
+    //printf("pte %d: %08x... physical page: %d\n", i, pcb->pagetable[i], pcb->pagetable[i]/MEM_PAGESIZE); // NOT:
   }
   // System stack
   alloc_page = MemoryAllocPage(); 
@@ -440,8 +442,8 @@ int ProcessFork (VoidFunc func, uint32 param, char *name, int isUser) {
     printf("MemoryAllocPage() Fail for system stack\n");
 	  exitsim();
   }
-  pcb->sysStackArea = alloc_page * MEM_PAGESIZE;
-
+  pcb->sysStackArea = alloc_page * MEM_PAGESIZE; // CHECK: should this also be in the pagetable?
+  pcb->pagetable[5] = MemorySetupPte(alloc_page); // CHECK: ^
   // User stack
 	alloc_page = MemoryAllocPage(); 
   if (alloc_page == MEM_FAIL){
@@ -481,9 +483,9 @@ int ProcessFork (VoidFunc func, uint32 param, char *name, int isUser) {
   // stack frame.
   //----------------------------------------------------------------------
   stackframe[PROCESS_STACK_PTBASE] = (uint32) pcb->pagetable;
-   stackframe[PROCESS_STACK_PTSIZE] = MEM_L1TABLE_SIZE;//256;
-   stackframe[PROCESS_STACK_PTBITS] = ( MEM_L1FIELD_FIRST_BITNUM << 16) | MEM_L1FIELD_FIRST_BITNUM;
-  
+  stackframe[PROCESS_STACK_PTSIZE] = MEM_L1TABLE_SIZE;//256;
+  stackframe[PROCESS_STACK_PTBITS] = ( MEM_L1FIELD_FIRST_BITNUM << 16) | MEM_L1FIELD_FIRST_BITNUM;
+
   
   if (isUser) {
     dbprintf ('p', "About to load %s\n", name);
@@ -667,6 +669,7 @@ ProcessGetCodeInfo (const char *file, uint32 *startAddr,
 
   // Open the file for reading.  If it returns a negative number, the open
   // didn't work.
+  
   if ((fd = FsOpen (file, FS_MODE_READ)) < 0) {
     dbprintf ('f', "ProcessGetCodeInfo: open of %s failed (%d).\n",
 	      file, fd);
