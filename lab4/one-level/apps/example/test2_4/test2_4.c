@@ -1,8 +1,19 @@
 #include "usertraps.h"
 #include "misc.h"
+#include "os/memory_constants.h"
+
+int grow(int n) {
+  //int top = 0;
+  if (n == 0) {
+    return 0;
+  }
+  Printf("Part2 Test4 (%d): Grow Stack %d times\n", getpid(), n);
+ return(grow(n-1)+1);
+}
 
 void main (int argc, char *argv[])
 {
+  int grow_out;
   sem_t s_procs_completed; // Semaphore to signal the original process that we're done
 
   if (argc != 2) { 
@@ -12,15 +23,15 @@ void main (int argc, char *argv[])
 
   // Convert the command-line strings into integers for use as handles
   s_procs_completed = dstrtol(argv[1], NULL, 10);
-
+  grow_out = grow(2500);
   // Now print a message to show that everything worked
-  Printf("hello_world (%d): Hello world!\n", getpid());
+  Printf("Part2 Test4 (%d): Grow Stack!\n", getpid());
 
   // Signal the semaphore to tell the original process that we're done
   if(sem_signal(s_procs_completed) != SYNC_SUCCESS) {
-    Printf("hello_world (%d): Bad semaphore s_procs_completed (%d)!\n", getpid(), s_procs_completed);
+    Printf("Part2 Test4 (%d): Bad semaphore s_procs_completed (%d)!\n", getpid(), s_procs_completed);
     Exit();
   }
 
-  Printf("hello_world (%d): Done!\n", getpid());
+  Printf("Part2 Test4 (%d): Done!\n", getpid());
 }

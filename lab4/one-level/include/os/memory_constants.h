@@ -33,5 +33,5 @@
 #define MEM_MAX_PHYS_MEM (0x1 << 21) // Use a maximum physical memory size of 2MB, CHECK: should this use MemoryGetSize() instead
 #define MEM_MAX_PAGES (MEM_MAX_PHYS_MEM / MEM_PAGESIZE)
 #define MEM_PTE_MASK (~(MEM_PTE_READONLY | MEM_PTE_DIRTY | MEM_PTE_VALID))
-#define MEM_FREEMAP_SIZE (MEM_NUM_PAGES/32) // CHECK: will it always be divisible by 32?
+#define MEM_FREEMAP_SIZE (MEM_MAX_PAGES/32) // CHECK: will it always be divisible by 32?
 #endif	// _memory_constants_h_

@@ -72,7 +72,7 @@ void main (int argc, char *argv[])
   for(i=1; i<=test_count; i++) {
     Printf("-------------------------------------------------------------------------------------\n");
     Printf("makeprocs (%d): test2_%d CREATE\n", getpid(), i);
-    switch(i)
+    switch(test_count)
     {
       case 1: run_test2_1();
               break;

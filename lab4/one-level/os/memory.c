@@ -10,6 +10,7 @@
 #include "process.h"
 #include "memory.h"
 #include "queue.h"
+#include "memory_constants.h"
 
 // num_pages = size_of_memory / size_of_one_page
 static uint32 freemap[MEM_FREEMAP_SIZE];
@@ -105,7 +106,7 @@ uint32 MemoryTranslateUserToSystem (PCB *pcb, uint32 addr) {
       return 0;
     }
   }
-  return ((pcb->pagetable[page] & MEMORY_PTE_MASK) + offset);
+  return ((pcb->pagetable[page] & MEM_PTE_MASK) + offset);
 }
 
 
@@ -247,7 +248,7 @@ int MemoryAllocPage() {
   }
   pageint = freemap[pagenum];
   while((pageint & (1 << bitnum)) == 0) { bitnum += 1; }
-  MemorySetFreemap(page, 0);
+  MemorySetFreemap(pagenum, 0);
   pageint = (pagenum * 32) + bitnum;
   dbprintf ('m', "Allocated memory, from map %d, page %d, map=0x%x.\n",
 	    pagenum, pageint, freemap[pagenum]);
@@ -272,13 +273,12 @@ void MemoryFreePage(uint32 page) {
 }
 
 void MemoryFreePte(uint32 pte) {
-  MemoryFreePage((pte & MEMORY_PTE_MASK) / MEM_PAGESIZE);
+  MemoryFreePage((pte & MEM_PTE_MASK) / MEM_PAGESIZE);
 }
 
 uint32 MemorySetupPte (uint32 page) {
  return ((page * MEM_PAGESIZE) | MEM_PTE_VALID);
 }
-
 
 
 
