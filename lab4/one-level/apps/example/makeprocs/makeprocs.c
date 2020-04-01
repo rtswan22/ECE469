@@ -49,8 +49,8 @@ void run_test2_4() {
 }
 void run_test2_5() {
   int i = 0;
-  ditoa(sem, sem_str);
   semCREATE(1);
+  ditoa(sem, sem_str);
   for(i = 0; i < 100; i++) {
     process_create(TEST2_1, sem_str, NULL);
     // CHECK: should this wait for each process individually?
@@ -92,13 +92,13 @@ void main (int argc, char *argv[])
     {
       case 1: run_test2_1();
               break;
-      case 2: run_test2_2();
+      case 2: //run_test2_2();
               break;
-      case 3: run_test2_3();
+      case 3: //run_test2_3();
               break;
       case 4: //run_test2_4(); // NEED: not freeing pages correctly?
               break;
-      case 5: //run_test2_5(); // NEED: getting stuck after one process?
+      case 5: run_test2_5();
               break;
       case 6: run_test2_6();
               break;
