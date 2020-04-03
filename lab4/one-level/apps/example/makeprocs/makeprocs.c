@@ -92,11 +92,11 @@ void main (int argc, char *argv[])
     {
       case 1: run_test2_1();
               break;
-      case 2: //run_test2_2();
+      case 2: run_test2_2();
               break;
-      case 3: //run_test2_3();
+      case 3: run_test2_3();
               break;
-      case 4: //run_test2_4(); // NEED: not freeing pages correctly?
+      case 4: run_test2_4(); // NEED: not freeing pages correctly?
               break;
       case 5: run_test2_5();
               break;

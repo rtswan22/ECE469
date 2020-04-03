@@ -143,7 +143,7 @@ void ProcessFreeResources (PCB *pcb) {
      if(pcb->pagetable[i] & MEM_PTE_VALID) {
        //printf("pte %d: %08x... physical page: %d\n", i, pcb->pagetable[i], pcb->pagetable[i]/MEM_PAGESIZE); // NOT:
        //printf("ProcessFreeResources for pcb %d: freeing page %d\n", GetPidFromAddress(pcb), pcb->pagetable[i]/MEM_PAGESIZE); // NOT
-       MemoryFreePage(pcb->pagetable[i]/MEM_PAGESIZE);
+       MemoryFreePte(pcb->pagetable[i]);
        pcb->pagetable[i] &= MEM_PTE_MASK;
      }
    }

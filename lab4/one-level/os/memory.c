@@ -219,11 +219,11 @@ int MemoryPageFaultHandler(PCB *pcb) {
   uint32 faddr = pcb->currentSavedFrame[PROCESS_STACK_FAULT]; // CHECK: is this correct 
   uint32 usaddr = pcb->currentSavedFrame[PROCESS_STACK_USER_STACKPOINTER]; // CHECK: is this correct 
   uint32 fpage = faddr / MEM_PAGESIZE;
-  //uint32 uspage = usaddr / MEM_PAGESIZE;
+  uint32 uspage = usaddr / MEM_PAGESIZE;
   printf("MemoryPageFaultHandler (%d): faddr %08x, usaddr %08x\n", faddr, usaddr); // NOT:
-  if(faddr < usaddr) { // NEED: anything else needed inside? is the logic backwards or something?
+  if(fpage < uspage) { // NEED: anything else needed inside? is the logic backwards or something?
     printf("SEGFAULT: PCB %d, vaddr 0x%08x\n", GetPidFromAddress(pcb), faddr);
-    ProcessKill();
+    ProcessKill();  
     return MEM_FAIL;
   }
   else { // CHECK: should stack pointer change?
@@ -261,7 +261,7 @@ int MemoryAllocPage() {
   MemorySetFreemap(pageint, 0);
   dbprintf ('m', "Allocated memory, from map %d, page %d, map=0x%x.\n", pagenum, pageint, freemap[pagenum]);
   nfreepages -= 1;
-  printf("(%d): allocated page %d.\n", GetCurrentPid(), pageint); // NOT:
+  //printf("(%d): allocated page %d.\n", GetCurrentPid(), pageint); // NOT:
   return (pageint);
 }
 

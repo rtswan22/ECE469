@@ -22,6 +22,6 @@ void main (int argc, char *argv[])
     Printf("test2_3 (%d): Bad semaphore s_procs_completed (%d)!\n", getpid(), s_procs_completed);
     Exit();
   }
-  mem = (*((int*)(0xFFFFF + 1 - 2*4096))); // CHECK: are we allowed to include the memory constants file
+  mem = (*((int*)(0xFFFFF + 1 - 10*4096))); // CHECK: are we allowed to include the memory constants file
   Printf("test2_3 (%d): Done!\n", getpid());
 }
