@@ -3,10 +3,8 @@
 
 void main (int argc, char *argv[])
 {
-  
-  
+  int vaddr_over = 0xFFFFF + 1;
   sem_t s_procs_completed; // Semaphore to signal the original process that we're done
-  int memory;
   if (argc != 2) { 
     Printf("Usage: %s <handle_to_procs_completed_semaphore>\n"); 
     Exit();
@@ -15,7 +13,7 @@ void main (int argc, char *argv[])
   s_procs_completed = dstrtol(argv[1], NULL, 10);
 
   // Now print a message to show that everything worked
-  Printf("test2_2 (%d): Access Memory Beyond Max Virtual Address! NOT NOT NOT NOT NOT NOT NOT\n", getpid());
+  Printf("test2_2 (%d): Access Memory Beyond Max Virtual Address!\n", getpid());
 
   // Signal the semaphore to tell the original process that we're done
   if(sem_signal(s_procs_completed) != SYNC_SUCCESS) {
@@ -23,8 +21,8 @@ void main (int argc, char *argv[])
     Exit();
   }
   //Set memory address greater than the MEM_MAX_VIRTUAL_ADDRESS
-  //memory = (*((int*)(0xFFFFFFFF))); // CHECK: are we allowed to include the memory constants file
-  (*((int*)(0xFFFFFFF0))) = 0xDEADBEEF;
+  Printf("test2_2 (%d): Attempting to print value at vaddr %s\n", getpid(), "0x100000");
+  Printf("Value: %d\n", (*((int*)(vaddr_over))));
 
   Printf("test2_2 (%d): Done!\n", getpid());
 }

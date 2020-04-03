@@ -147,7 +147,7 @@ void ProcessFreeResources (PCB *pcb) {
       pcb->pagetable[i] &= MEM_PTE_MASK;
     }
   }
-  MemoryFreePage(pcb->sysStackArea/PAGE_SIZE); // CHECK:
+  MemoryFreePage(pcb->sysStackArea/MEM_PAGESIZE); // CHECK:
 
   ProcessSetStatus (pcb, PROCESS_STATUS_FREE);
 }

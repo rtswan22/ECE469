@@ -104,7 +104,7 @@ uint32 MemoryTranslateUserToSystem (PCB *pcb, uint32 addr) {
     return 0;
   }
   //printf("(%d): Translating vaddr %05x\n", GetPidFromAddress(pcb), addr); // NOT:
-  if((pcb->pagetable[page] & MEM_PTE_VALID) == 0) { // if invalid page
+  if(!(pcb->pagetable[page] & MEM_PTE_VALID)) { // if invalid page
     pcb->currentSavedFrame[PROCESS_STACK_FAULT] = addr;
     if(MemoryPageFaultHandler(pcb) == MEM_FAIL) {
       printf("MemoryTranslateUserToSystem: Failed to handle pagefault, PCB %d\n", GetPidFromAddress(currentPCB)); // CHECK: dbprintf instead?
@@ -228,7 +228,7 @@ int MemoryPageFaultHandler(PCB *pcb) {
   }
   else { // CHECK: should stack pointer change?
     // allocate page, setup pte, insert to table
-    printf("(%d): allocating page %d, for vaddr 0x%08x\n", GetPidFromAddress(pcb), fpage, faddr); // NOT:
+    //printf("(%d): allocating page %d, for vaddr 0x%08x\n", GetPidFromAddress(pcb), fpage, faddr); // NOT:
     pcb->pagetable[fpage] = MemorySetupPte(MemoryAllocPage());
     pcb->npages += 1;
     return MEM_SUCCESS;
