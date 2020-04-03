@@ -1,0 +1,18 @@
+cd ../; make run
+make[1]: Entering directory `/home/shay/a/jgaona/ee469/lab4/one-level/apps/example'
+cd ../../bin; dlxsim -x os.dlx.obj -a -u makeprocs.dlx.obj 6; ee469_fixterminal
+Stack=0x1fffc8, pc starting at 0x11d94
+Got 3 arguments.
+Available memory: 0x22558 -> 0x200000.
+Argument count is 3.
+Argument 0 is -u.
+Argument 1 is makeprocs.dlx.obj.
+Argument 2 is 6.
+(-60921603): allocated page 35.
+(-60921603): allocated page 36.
+(-60921603): allocated page 37.
+(-60921603): allocated page 38.
+(-60921603): allocated page 39.
+(-60921603): allocated page 40.
+Got a control-C: exiting!
+make[1]: Leaving directory `/home/shay/a/jgaona/ee469/lab4/one-level/apps/example'
