@@ -139,14 +139,15 @@ void ProcessFreeResources (PCB *pcb) {
   //------------------------------------------------------------
   // STUDENT: Free any memory resources on process death here.
   //------------------------------------------------------------  
-   for (i = 0; i < MEM_L1TABLE_SIZE; i++) { //CHECK: in general? and heap free?
-     if(pcb->pagetable[i] & MEM_PTE_VALID) {
-       //printf("pte %d: %08x... physical page: %d\n", i, pcb->pagetable[i], pcb->pagetable[i]/MEM_PAGESIZE); // NOT:
-       //printf("ProcessFreeResources for pcb %d: freeing page %d\n", GetPidFromAddress(pcb), pcb->pagetable[i]/MEM_PAGESIZE); // NOT
-       MemoryFreePte(pcb->pagetable[i]);
-       pcb->pagetable[i] &= MEM_PTE_MASK;
-     }
-   }
+  for (i = 0; i < MEM_L1TABLE_SIZE; i++) { //CHECK: in general? and heap free?
+    if(pcb->pagetable[i] & MEM_PTE_VALID) {
+      //printf("pte %d: %08x... physical page: %d\n", i, pcb->pagetable[i], pcb->pagetable[i]/MEM_PAGESIZE); // NOT:
+      //printf("ProcessFreeResources for pcb %d: freeing page %d\n", GetPidFromAddress(pcb), pcb->pagetable[i]/MEM_PAGESIZE); // NOT
+      MemoryFreePte(pcb->pagetable[i]);
+      pcb->pagetable[i] &= MEM_PTE_MASK;
+    }
+  }
+  MemoryFreePage(pcb->sysStackArea/PAGE_SIZE); // CHECK:
 
   ProcessSetStatus (pcb, PROCESS_STATUS_FREE);
 }
@@ -442,8 +443,8 @@ int ProcessFork (VoidFunc func, uint32 param, char *name, int isUser) {
     printf("MemoryAllocPage() Fail for system stack\n");
 	  exitsim();
   }
-  pcb->sysStackArea = alloc_page * MEM_PAGESIZE; // CHECK: should this also be in the pagetable?
-  pcb->pagetable[5] = MemorySetupPte(alloc_page); // CHECK: ^
+  pcb->sysStackArea = alloc_page * MEM_PAGESIZE; // CHECK: should this also be in the pagetable? either way, should it be counted in the 32 max pages?
+  //pcb->pagetable[5] = MemorySetupPte(alloc_page); // CHECK: ^
   // User stack
 	alloc_page = MemoryAllocPage(); 
   if (alloc_page == MEM_FAIL){

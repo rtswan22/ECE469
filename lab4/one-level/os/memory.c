@@ -240,7 +240,7 @@ int MemoryPageFaultHandler(PCB *pcb) {
 // You may need to implement the following functions and access them from process.c
 // Feel free to edit/remove them
 //---------------------------------------------------------------------
-int MemoryAllocPage() {
+int MemoryAllocPage() { // CHECK: do we need to check that we don't go over the maximum of 32 pages per proccess here?
   static int pagenum = 0; // CHECK: should this still be static?
   uint32 bitnum = 0;
   uint32 pageint;
