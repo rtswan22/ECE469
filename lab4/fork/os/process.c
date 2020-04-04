@@ -1001,15 +1001,12 @@ void ProcessKill() {
 void ProcessRealFork() {
   int i;                   // Loop index variable
   int alloc_page;
-  unsigned char buf[100];  // Used for reading code from files.
-  uint32 *stackframe;      // Stores address of current stack frame.
   PCB *childpcb;                // Holds pcb while we build it for this process.
   int intrs;               // Stores previous interrupt settings.
 
 
   intrs = DisableIntrs ();
   dbprintf ('I', "Old interrupt value was 0x%x.\n", intrs);
-  dbprintf ('p', "Entering ProcessFork args=0x%x 0x%x %s %d\n", (int)func, param, name, isUser);
   // GET FREE PCB
   if (AQueueEmpty(&freepcbs)) {
     printf ("FATAL error: no free processes!\n");
@@ -1028,7 +1025,7 @@ void ProcessRealFork() {
   for (i = 0; i < MEM_L1TABLE_SIZE; i++) { //CHECK: in general? and heap free?
     if(currentPCB->pagetable[i] & MEM_PTE_VALID) {
       currentPCB->pagetable[i] |= MEM_PTE_READONLY;
-      page_refcounters[(currentPCB->pagetable[i] & MEM_PTE_MASK) / MEM_PAGESIZE] += 1;
+      increment_refcounters((currentPCB->pagetable[i] & MEM_PTE_MASK) / MEM_PAGESIZE);
     }
   }
 
@@ -1046,8 +1043,8 @@ void ProcessRealFork() {
   childpcb->sysStackArea = alloc_page * MEM_PAGESIZE;
   bcopy((void*)currentPCB->sysStackArea, (void*)childpcb->sysStackArea, MEM_PAGESIZE);
   // FIX SYSTACK AND CURRENTSAVEDFRAME
-  childpcb->sysStackPtr = childpcb->sysStackArea + currentPCB->sysStackArea & MEM_ADDRESS_OFFSET_MASK;
-  childpcb->currentSavedFrame = childpcb->sysStackArea + currentPCB->currentSavedFrame & MEM_ADDRESS_OFFSET_MASK; // CHECK: not sure if this is right
+  childpcb->sysStackPtr = (uint32*)(childpcb->sysStackArea + (currentPCB->sysStackArea & MEM_ADDRESS_OFFSET_MASK));
+  childpcb->currentSavedFrame = (uint32*)(childpcb->sysStackArea + ((uint32)currentPCB->currentSavedFrame & MEM_ADDRESS_OFFSET_MASK)); // NEED: not sure if this is right
   //childpcb->pagetable[MEM_L1TABLE_SIZE - 1] = MemorySetupPte(alloc_page);
 
   //SET PTBASE
@@ -1055,11 +1052,11 @@ void ProcessRealFork() {
 
   //FIX PREV SAVE FRAME
   if(currentPCB->currentSavedFrame[PROCESS_STACK_PREV_FRAME] != 0) {
-    childPCB->currentSavedFrame[PROCESS_STACK_PREV_FRAME] = ???; // NEED:
+    childpcb->currentSavedFrame[PROCESS_STACK_PREV_FRAME] = (uint32)(childpcb->sysStackArea + (currentPCB->currentSavedFrame[PROCESS_STACK_PREV_FRAME] & MEM_ADDRESS_OFFSET_MASK)); // NEED:
   }
 
   // SET RETURN VALUES
-  ProcessSetResult(currentPCB, GetPidFromAddress(childPCB));
+  ProcessSetResult(currentPCB, GetPidFromAddress(childpcb));
   ProcessSetResult(childpcb, 0);
 
   // CHILD INTO RUNQUEUE
@@ -1075,6 +1072,6 @@ void ProcessRealFork() {
   }
   RestoreIntrs (intrs);
 
-  dbprintf ('p', "Leaving ProcessRealFork (%s)\n", name);
+  dbprintf ('p', "Leaving ProcessRealFork\n");
   //return (childpcb - pcbs);
 }
