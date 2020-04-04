@@ -532,6 +532,9 @@ dointerrupt (unsigned int cause, unsigned int iar, unsigned int isr,
     case TRAP_PAGEFAULT:
       MemoryPageFaultHandler(currentPCB);
       break;
+    case TRAP_ROP_ACCESS: // Q3:
+      MemoryROPAccessHandler(currentPCB);
+      break;
     default:
       printf ("Got an unrecognized system interrupt (0x%x) - exiting!\n",
 	      cause);

@@ -27,6 +27,9 @@ inline void MemorySetFreemap(int p, int b);
 void MemoryFreePage(uint32 page);
 void MemoryFreePte (uint32 pte);
 uint32 MemorySetupPte (uint32 page);
+
+int MemoryROPAccessHandler(PCB* pcb); // Q3:
+
 void *malloc(); // NEED: how is this setup
 int mfree(); // NEED: how is this setup
 

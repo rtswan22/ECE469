@@ -17,7 +17,7 @@ static uint32 freemap[MEM_FREEMAP_SIZE];
 static uint32 pagestart;
 static int nfreepages;
 static int freemapmax;
-static int page_refcounters[MEM_MAX_PAGES]
+static int page_refcounters[MEM_MAX_PAGES];
 
 //----------------------------------------------------------------------
 //
@@ -76,9 +76,8 @@ void MemoryModuleInit() {
   }
   nfreepages = 0;
   //set refcounter to 1 for all os pages, 0 for all other pages
-  for (curpage = 0; curpage < pagestart; curpage++) { //CHECK
+  for (curpage = 0; curpage < pagestart; curpage++) { //Q3: CHECK:
     //printf("curpage: %d\n", curpage); // NOT
-    
     page_refcounters[curpage] = 1;
   }
 
@@ -225,12 +224,12 @@ int MemoryCopyUserToSystem (PCB *pcb, unsigned char *from,unsigned char *to, int
 int MemoryPageFaultHandler(PCB *pcb) {
   // faddr: fault address
   // usaddr: user stack addr
-  uint32 faddr = pcb->currentSavedFrame[PROCESS_STACK_FAULT]; // CHECK: is this correct 
-  uint32 usaddr = pcb->currentSavedFrame[PROCESS_STACK_USER_STACKPOINTER]; // CHECK: is this correct 
+  uint32 faddr = pcb->currentSavedFrame[PROCESS_STACK_FAULT];
+  uint32 usaddr = pcb->currentSavedFrame[PROCESS_STACK_USER_STACKPOINTER];
   uint32 fpage = faddr / MEM_PAGESIZE;
   uint32 uspage = usaddr / MEM_PAGESIZE;
-  printf("MemoryPageFaultHandler (%d): faddr %08x, usaddr %08x\n", faddr, usaddr); // NOT:
-  if(fpage < uspage) { // NEED: anything else needed inside? is the logic backwards or something?
+  //printf("MemoryPageFaultHandler (%d): faddr %08x, usaddr %08x\n", GetPidFromAddress(pcb), faddr, usaddr); // NOT:
+  if(fpage < uspage) {
     printf("SEGFAULT: PCB %d, vaddr 0x%08x\n", GetPidFromAddress(pcb), faddr);
     ProcessKill();  
     return MEM_FAIL;
@@ -250,7 +249,7 @@ int MemoryPageFaultHandler(PCB *pcb) {
 // Feel free to edit/remove them
 //---------------------------------------------------------------------
 int MemoryAllocPage() { // CHECK: do we need to check that we don't go over the maximum of 32 pages per proccess here?
-  static int pagenum = 0; // CHECK: should this still be static?
+  static int pagenum = 0;
   uint32 bitnum = 0;
   uint32 pageint;
 
@@ -271,16 +270,12 @@ int MemoryAllocPage() { // CHECK: do we need to check that we don't go over the 
   dbprintf ('m', "Allocated memory, from map %d, page %d, map=0x%x.\n", pagenum, pageint, freemap[pagenum]);
   nfreepages -= 1;
   //after finding the available bit in freemap, set the reference count for this page to 1
-  page_refcounters[pageint] = 1; //Check
+  page_refcounters[pageint] = 1; //Q3: CHECK:
   //printf("(%d): allocated page %d.\n", GetCurrentPid(), pageint); // NOT:
   return (pageint);
 }
 
 
-/* This function is called whenever a process tries to access a page that is marked as “readonly” in its page table. If no one else refers to this page (refcounter == 1), then we can just mark it as READONLY in the page table. Otherwise, we have to allocate a new page, copy the entire old page to the new page, decrement the reference coutner for the old page, mark the new page as READONLY, and put the new pte into the page table to replace the old pte */
-void MemoryROPHandler(PCB * pcb) {
-//NEED
-}
 
 inline void MemorySetFreemap(int p, int b) {
   uint32	wd = p / 32;
@@ -304,22 +299,47 @@ void MemoryFreePte(uint32 pte) {
 			//decrement refcount for the given page
 	//	if refcount == 0
 		//	MemoryFreePage
-		
-		if (page_refcounters[pte] < 1){
-		ProcessKill();
-		return MEM_FAIL;
-		}
-		else if (page_refcounters[pte] == 0){
-		MemoryFreePage((pte & MEM_PTE_MASK) / MEM_PAGESIZE);
-		}
-    else {
-    page_refcounters[pte] -= 1;
-    }
+  uint32 phpage = (pte & MEM_PTE_MASK) / MEM_PAGESIZE;
+  if(page_refcounters[phpage] < 1) { // Q3: if else
+    ProcessKill();
+    //return MEM_FAIL; // CHECK: should this return like the document said? despite being void?
+  }
+  else {
+    page_refcounters[phpage] -= 1;
+  }
+
+  if(page_refcounters[phpage] == 0) {
+    MemoryFreePage(phpage);
+  }
 }
 
 uint32 MemorySetupPte (uint32 page) {
  return ((page * MEM_PAGESIZE) | MEM_PTE_VALID);
 }
 
-
+/* This function is called whenever a process tries to access a page that is marked as “readonly” in its page table. If no one else refers to this page (refcounter == 1), then we can just mark it as READONLY in the page table. Otherwise, we have to allocate a new page, copy the entire old page to the new page, decrement the reference coutner for the old page, mark the new page as READONLY, and put the new pte into the page table to replace the old pte */
+int MemoryROPAccessHandler(PCB* pcb) { // Q3: CHECK:
+  // faddr: fault address
+  // phaddr: physical address
+  uint32 faddr = pcb->currentSavedFrame[PROCESS_STACK_FAULT];
+  uint32 fpage = faddr / MEM_PAGESIZE;
+  uint32 phpage = (pcb->pagetable[fpage] & MEM_PTE_MASK) / MEM_PAGESIZE;
+  uint32 newpage;
+  
+  
+  if(page_refcounters[phpage] < 1) {
+    ProcessKill();
+    return MEM_FAIL;
+  }
+  if(page_refcounters[phpage] == 1) {
+    pcb->pagetable[fpage] &= ~MEM_PTE_READONLY; //CHECK: help document says set as read only but lab document says set as R/W
+  }
+  else {
+    newpage = MemoryAllocPage();
+    bcopy((void*)(pcb->pagetable[fpage] & MEM_PTE_MASK), (void*)(newpage * MEM_PAGESIZE), MEM_PAGESIZE);
+    pcb->pagetable[fpage] = MemorySetupPte(newpage);
+    page_refcounters[phpage] -= 1;
+  }
+  return MEM_SUCCESS;
+}
 

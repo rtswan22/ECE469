@@ -21,7 +21,7 @@ void main (int argc, char *argv[])
     Printf("test2_3 (%d): Bad semaphore s_procs_completed (%d)!\n", getpid(), s_procs_completed);
     Exit();
   }
-  Printf("test2_3 (%d): Attempting to print vaddr %s\n", getpid(), "0xF6000);
+  Printf("test2_3 (%d): Attempting to print vaddr %s\n", getpid(), "0xF6000");
   Printf("Value: %d\n", (*((int*)(vaddr_no_alloc)))); // CHECK: are we allowed to include the memory constants file
   Printf("test2_3 (%d): Done!\n", getpid());
 }

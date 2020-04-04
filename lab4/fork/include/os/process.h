@@ -85,7 +85,7 @@ extern PCB	*currentPCB;
 // Existing function Prototypes
 //---------------------------------------------------------
 
-int ProcessFork (VoidFunc func, uint32 param, char *name, int isUser);
+int ProcessFork(VoidFunc func, uint32 param, char *name, int isUser);
 void ProcessSchedule ();
 void ContextSwitch(void *, void *, int);
 void ProcessSuspend (PCB *);
@@ -102,6 +102,7 @@ void ProcessKill();
 // Put any functions prototypes that you define here.
 //-------------------------------------------------------
 
+void ProcessRealFork();
 
 
 #endif	/* __process_h__ */
