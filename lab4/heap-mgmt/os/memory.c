@@ -17,6 +17,7 @@ static uint32 freemap[MEM_FREEMAP_SIZE];
 static uint32 pagestart;
 static int nfreepages;
 static int freemapmax;
+static int maxHeapOrder; // Q5:
 
 //----------------------------------------------------------------------
 //
@@ -60,6 +61,7 @@ void MemoryModuleInit() {
   int	i;
   int maxpage = MEM_MAX_PHYS_MEM / MEM_PAGESIZE;
   int	curpage;
+  int heap_order0_count = MEM_HEAP_ORDER0_COUNT;
   
   dbprintf('m', "MemoryModuleInit:  begin");
 
@@ -80,6 +82,12 @@ void MemoryModuleInit() {
     nfreepages += 1;
     MemorySetFreemap(curpage, 1);
   }
+  maxHeapOrder = -1; // Q5:
+  while(heap_order0_count) { // Q5: // CHECK: do we need to make sure that one order zero can fit?
+    heap_order0_count = heap_order0_count >> 1;
+    maxHeapOrder++;
+  }
+ 
   //printf("nfreepages: %d\n", nfreepages); // NOT
   dbprintf ('m', "Initialized %d free pages.\n", nfreepages);
 }
@@ -288,5 +296,30 @@ uint32 MemorySetupPte (uint32 page) {
  return ((page * MEM_PAGESIZE) | MEM_PTE_VALID);
 }
 
-
-
+void *malloc(int memsize) { // Q5: CHECK: make sure to allocate in word multiples
+  int i = 0;
+  int j = 0;
+  int min_order = maxHeapOrder;
+  //int order0_need = (memsize/MEM_HEAP_ORDER0);
+  //int max_div = 1 << maxHeapOrder;
+  if((memsize > (MEM_HEAP_ORDER0 << maxHeapOrder)) || (memsize <= 0)) {
+    return NULL;
+  }
+  
+  if(memsize % MEM_HEAP_ORDER0) { order0_need += 1; }
+  /*while(!(order0_need / max_div)) { // NEED: find minimum order
+    min_order--;
+    max_div = max_div >> 1;
+  }*/
+  j = 0;
+  for(i = 0; i < min_order; i++) {
+    while(currentPCB->heapAlloc[j]) { // CHECK: might be more efficient but unsure if it works
+      if(j >= MEM_HEAP_ORDER0_COUNT) return NULL;
+      j += currentPCB->heapAlloc[j];
+    }
+  }
+  return NULL;
+}
+int mfree(void* ptr) { // Q5:
+  return MEM_FAIL;
+}

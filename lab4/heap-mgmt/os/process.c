@@ -89,6 +89,9 @@ void ProcessModuleInit () {
     for(j = 0; j < MEM_L1TABLE_SIZE; j++){
       pcbs[i].pagetable[j] = 0;
     }
+    for(j = 0; j < MEM_HEAP_ORDER0_COUNT; j++) { // Q5:
+      pcbs[i].heapAlloc[j] = 0;
+    }
     // Finally, insert the link into the queue
     if (AQueueInsertFirst(&freepcbs, pcbs[i].l) != QUEUE_SUCCESS) {
       printf("FATAL ERROR: could not insert PCB link into queue in ProcessModuleInit!\n");
@@ -147,6 +150,7 @@ void ProcessFreeResources (PCB *pcb) {
       pcb->pagetable[i] &= MEM_PTE_MASK;
     }
   }
+  MemoryFreePage(pcb->heapArea/MEM_PAGESIZE); // Q5:
   MemoryFreePage(pcb->sysStackArea/MEM_PAGESIZE); // CHECK:
 
   ProcessSetStatus (pcb, PROCESS_STATUS_FREE);
@@ -421,7 +425,7 @@ int ProcessFork (VoidFunc func, uint32 param, char *name, int isUser) {
   // Allocate 1 page for system stack, 1 page for user stack (at top of
   // virtual address space), and 4 pages for user code and global data.
 
-  pcb->npages = 6;
+  pcb->npages = 7; // Q5: 6 to 7
   //---------------------------------------------------------
   // STUDENT: allocate pages for a new process here.  The
   // code below assumes that you set the "stackframe" variable
@@ -437,6 +441,13 @@ int ProcessFork (VoidFunc func, uint32 param, char *name, int isUser) {
 	  pcb->pagetable[i] = MemorySetupPte(alloc_page);
     //printf("pte %d: %08x... physical page: %d\n", i, pcb->pagetable[i], pcb->pagetable[i]/MEM_PAGESIZE); // NOT:
   }
+  // HEAP page Q5:
+  alloc_page = MemoryAllocPage(); 
+  if (alloc_page == MEM_FAIL){
+    printf("MemoryAllocPage() Fail for heap\n");
+	  exitsim();
+  }
+  pcb->heapArea = alloc_page * MEM_PAGESIZE;
   // System stack
   alloc_page = MemoryAllocPage(); 
   if (alloc_page == MEM_FAIL){

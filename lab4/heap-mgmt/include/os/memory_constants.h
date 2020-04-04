@@ -34,4 +34,8 @@
 #define MEM_MAX_PAGES (MEM_MAX_PHYS_MEM / MEM_PAGESIZE)
 #define MEM_PTE_MASK (~(MEM_PTE_READONLY | MEM_PTE_DIRTY | MEM_PTE_VALID))
 #define MEM_FREEMAP_SIZE (MEM_MAX_PAGES/32) // CHECK: will it always be divisible by 32?
+
+// Q5: HEAP
+#define MEM_HEAP_ORDER0 32 // bytes
+#define MEM_HEAP_ORDER0_COUNT (MEM_PAGESIZE/MEM_HEAP_ORDER0)
 #endif	// _memory_constants_h_
