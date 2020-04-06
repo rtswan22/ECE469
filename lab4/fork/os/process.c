@@ -998,6 +998,18 @@ void ProcessKill() {
   ProcessSchedule();
 }
 
+
+void ProcessPrintFork(PCB *pcb)
+{
+  int i;
+  printf("Valid PTE in process fork (PID): %d\n",   GetPidFromAddress(pcb));
+  for (i = 0; i < MEM_L1PAGETABLE_SIZE; i++) {     
+      printf("PTE: %d | INDEX: %d", pcb->pagetable[i], i);
+    }
+  }
+
+}
+}
 void ProcessRealFork() {
   int i;                   // Loop index variable
   int alloc_page;
@@ -1072,6 +1084,13 @@ void ProcessRealFork() {
   }
   RestoreIntrs (intrs);
 
+  //Q4: Printing PTE for Parent and child
+  printf("ProcessRealFork: Printing Valid PTE's for parent process:\n");
+  Process_Fork_print(currentPCB);
+  
+  printf("ProcessRealFork: Printing Valid PTE's for child process:\n");
+  ProcessPrintFork(childpcb);
+  
   dbprintf ('p', "Leaving ProcessRealFork\n");
   //return (childpcb - pcbs);
 }
