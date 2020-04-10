@@ -234,7 +234,7 @@ int MemoryPageFaultHandler(PCB *pcb) {
     ProcessKill();  
     return MEM_FAIL;
   }
-  else { // CHECK: should stack pointer change?
+  else {
     // allocate page, setup pte, insert to table
     //printf("(%d): allocating page %d, for vaddr 0x%08x\n", GetPidFromAddress(pcb), fpage, faddr); // NOT:
     pcb->pagetable[fpage] = MemorySetupPte(MemoryAllocPage());
@@ -248,7 +248,7 @@ int MemoryPageFaultHandler(PCB *pcb) {
 // You may need to implement the following functions and access them from process.c
 // Feel free to edit/remove them
 //---------------------------------------------------------------------
-int MemoryAllocPage() { // CHECK: do we need to check that we don't go over the maximum of 32 pages per proccess here?
+int MemoryAllocPage() {
   static int pagenum = 0;
   uint32 bitnum = 0;
   uint32 pageint;
@@ -302,7 +302,6 @@ void MemoryFreePte(uint32 pte) {
   uint32 phpage = (pte & MEM_PTE_MASK) / MEM_PAGESIZE;
   if(page_refcounters[phpage] < 1) { // Q3: if else
     ProcessKill();
-    //return MEM_FAIL; // CHECK: should this return like the document said? despite being void?
   }
   else {
     page_refcounters[phpage] -= 1;
@@ -314,7 +313,8 @@ void MemoryFreePte(uint32 pte) {
 }
 
 uint32 MemorySetupPte (uint32 page) {
- return ((page * MEM_PAGESIZE) | MEM_PTE_VALID);
+  //printf("%x\n", ((page * MEM_PAGESIZE) | MEM_PTE_VALID)); // NOT:
+  return ((page * MEM_PAGESIZE) | MEM_PTE_VALID);
 }
 
 /* This function is called whenever a process tries to access a page that is marked as “readonly” in its page table. If no one else refers to this page (refcounter == 1), then we can just mark it as READONLY in the page table. Otherwise, we have to allocate a new page, copy the entire old page to the new page, decrement the reference coutner for the old page, mark the new page as READONLY, and put the new pte into the page table to replace the old pte */
@@ -326,13 +326,13 @@ int MemoryROPAccessHandler(PCB* pcb) { // Q3: CHECK:
   uint32 phpage = (pcb->pagetable[fpage] & MEM_PTE_MASK) / MEM_PAGESIZE;
   uint32 newpage;
   
-  
+  //printf("ROP page: %x\n", pcb->pagetable[fpage]); // NOT:
   if(page_refcounters[phpage] < 1) {
     ProcessKill();
     return MEM_FAIL;
   }
   if(page_refcounters[phpage] == 1) {
-    pcb->pagetable[fpage] &= ~MEM_PTE_READONLY; //CHECK: help document says set as read only but lab document says set as R/W
+    pcb->pagetable[fpage] &= ~MEM_PTE_READONLY;
   }
   else {
     newpage = MemoryAllocPage();
@@ -340,6 +340,11 @@ int MemoryROPAccessHandler(PCB* pcb) { // Q3: CHECK:
     pcb->pagetable[fpage] = MemorySetupPte(newpage);
     page_refcounters[phpage] -= 1;
   }
+  //Q4:
+  dbprintf ('p', "Leaving ProcessRealFork\n");
+  printf("----------PCB (%d) POST ROP HANDLER----------\n", GetPidFromAddress(currentPCB));
+  ProcessPrintPTE(pcb);
+  printf("---------------------------------------------\n");
   return MEM_SUCCESS;
 }
 

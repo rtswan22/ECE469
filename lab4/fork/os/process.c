@@ -627,6 +627,9 @@ int ProcessFork (VoidFunc func, uint32 param, char *name, int isUser) {
   dbprintf ('p', "Leaving ProcessFork (%s)\n", name);
   // Return the process number (found by subtracting the PCB number
   // from the base of the PCB array).
+  
+  printf("FORK\n");
+  ProcessPrintPTE(pcb);
   return (pcb - pcbs);
 }
 
@@ -999,18 +1002,8 @@ void ProcessKill() {
 }
 
 
-void ProcessPrintFork(PCB *pcb)
-{
-  int i;
-  printf("Valid PTE in process fork (PID): %d\n",   GetPidFromAddress(pcb));
-  for (i = 0; i < MEM_L1PAGETABLE_SIZE; i++) {     
-      printf("PTE: %d | INDEX: %d", pcb->pagetable[i], i);
-    }
-  }
 
-}
-}
-void ProcessRealFork() {
+void ProcessRealFork() { // Q3:
   int i;                   // Loop index variable
   int alloc_page;
   PCB *childpcb;                // Holds pcb while we build it for this process.
@@ -1036,6 +1029,7 @@ void ProcessRealFork() {
   // MAKE READONLY
   for (i = 0; i < MEM_L1TABLE_SIZE; i++) { //CHECK: in general? and heap free?
     if(currentPCB->pagetable[i] & MEM_PTE_VALID) {
+      //printf("pte: %x\n", currentPCB->pagetable[i]); // NOT:
       currentPCB->pagetable[i] |= MEM_PTE_READONLY;
       increment_refcounters((currentPCB->pagetable[i] & MEM_PTE_MASK) / MEM_PAGESIZE);
     }
@@ -1055,8 +1049,8 @@ void ProcessRealFork() {
   childpcb->sysStackArea = alloc_page * MEM_PAGESIZE;
   bcopy((void*)currentPCB->sysStackArea, (void*)childpcb->sysStackArea, MEM_PAGESIZE);
   // FIX SYSTACK AND CURRENTSAVEDFRAME
-  childpcb->sysStackPtr = (uint32*)(childpcb->sysStackArea + (currentPCB->sysStackArea & MEM_ADDRESS_OFFSET_MASK));
-  childpcb->currentSavedFrame = (uint32*)(childpcb->sysStackArea + ((uint32)currentPCB->currentSavedFrame & MEM_ADDRESS_OFFSET_MASK)); // NEED: not sure if this is right
+  childpcb->sysStackPtr = (uint32*)(childpcb->sysStackArea + ((uint32)currentPCB->sysStackPtr & MEM_ADDRESS_OFFSET_MASK));
+  childpcb->currentSavedFrame = (uint32*)(childpcb->sysStackArea + ((uint32)currentPCB->currentSavedFrame & MEM_ADDRESS_OFFSET_MASK));
   //childpcb->pagetable[MEM_L1TABLE_SIZE - 1] = MemorySetupPte(alloc_page);
 
   //SET PTBASE
@@ -1064,7 +1058,7 @@ void ProcessRealFork() {
 
   //FIX PREV SAVE FRAME
   if(currentPCB->currentSavedFrame[PROCESS_STACK_PREV_FRAME] != 0) {
-    childpcb->currentSavedFrame[PROCESS_STACK_PREV_FRAME] = (uint32)(childpcb->sysStackArea + (currentPCB->currentSavedFrame[PROCESS_STACK_PREV_FRAME] & MEM_ADDRESS_OFFSET_MASK)); // NEED:
+    childpcb->currentSavedFrame[PROCESS_STACK_PREV_FRAME] = (uint32)(childpcb->sysStackArea + (currentPCB->currentSavedFrame[PROCESS_STACK_PREV_FRAME] & MEM_ADDRESS_OFFSET_MASK));
   }
 
   // SET RETURN VALUES
@@ -1085,12 +1079,23 @@ void ProcessRealFork() {
   RestoreIntrs (intrs);
 
   //Q4: Printing PTE for Parent and child
-  printf("ProcessRealFork: Printing Valid PTE's for parent process:\n");
-  Process_Fork_print(currentPCB);
-  
-  printf("ProcessRealFork: Printing Valid PTE's for child process:\n");
-  ProcessPrintFork(childpcb);
-  
   dbprintf ('p', "Leaving ProcessRealFork\n");
-  //return (childpcb - pcbs);
+  printf("----------PARENT (%d) POST FORK----------\n", GetPidFromAddress(currentPCB));
+  ProcessPrintPTE(currentPCB);
+  printf("---------- CHILD (%d) POST FORK----------\n", GetPidFromAddress(childpcb));
+  ProcessPrintPTE(childpcb);
+  printf("-----------------------------------------\n");
+}
+
+void ProcessPrintPTE(PCB* pcb) { // Q4
+  int i;
+  
+  printf("BEGIN: Printing PCB %d PTE\n", GetPidFromAddress(pcb));
+  printf("(PCB %d) currentSavedFrame: %08x\n", GetPidFromAddress(pcb), pcb->currentSavedFrame);
+  printf("(PCB %d) sysStackPtr: %08x\n", GetPidFromAddress(pcb), pcb->sysStackPtr);
+  printf("(PCB %d) sysStackArea: %08x\n", GetPidFromAddress(pcb), pcb->sysStackArea);
+  for(i = 0; i < MEM_L1TABLE_SIZE; i++) {
+    if(pcb->pagetable[i]) printf("(PCB %d) PTE[%d]: %08x\n", GetPidFromAddress(pcb), i, pcb->pagetable[i]);
+  }
+  printf("DONE: Printing PCB %d PTE\n", GetPidFromAddress(pcb));
 }

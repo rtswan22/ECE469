@@ -358,7 +358,7 @@ dointerrupt (unsigned int cause, unsigned int iar, unsigned int isr,
       ProcessSchedule ();
       ClkResetProcess();
       break;
-    case TRAP_PROCESS_FORK:
+    case TRAP_PROCESS_FORK: // NEED: check
       dbprintf ('t', "Got a fork trap!\n");
       ProcessRealFork(); // Q3:
       break;
