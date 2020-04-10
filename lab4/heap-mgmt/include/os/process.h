@@ -40,8 +40,8 @@ typedef struct PCB {
   unsigned int	flags;
   char		name[80];	// Process name
   uint32	pagetable[MEM_L1TABLE_SIZE]; // Statically allocated page table
-  uint32 heapArea; //heap location.
-  int heapAlloc[MEM_HEAP_ORDER0_COUNT]; // Q5:
+  uint32 heapArea; // Q5: heap location.
+  int heapAlloc[MEM_HEAP_ORDER0_COUNT]; // Q5:each index is an address and the value at the index is the size
   int		npages;		// Number of pages allocated to this process
   Link		*l;		// Used for keeping PCB in queues
 } PCB;

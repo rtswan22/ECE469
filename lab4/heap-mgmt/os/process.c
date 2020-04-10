@@ -150,7 +150,8 @@ void ProcessFreeResources (PCB *pcb) {
       pcb->pagetable[i] &= MEM_PTE_MASK;
     }
   }
-  MemoryFreePage(pcb->heapArea/MEM_PAGESIZE); // Q5:
+  MemoryFreePte(pcb->pagetable[MEM_HEAP_PTE_PAGE]); // Q5:
+  pcb->pagetable[MEM_HEAP_PTE_PAGE] &= MEM_PTE_MASK;
   MemoryFreePage(pcb->sysStackArea/MEM_PAGESIZE); // CHECK:
 
   ProcessSetStatus (pcb, PROCESS_STATUS_FREE);
@@ -447,7 +448,7 @@ int ProcessFork (VoidFunc func, uint32 param, char *name, int isUser) {
     printf("MemoryAllocPage() Fail for heap\n");
 	  exitsim();
   }
-  pcb->heapArea = alloc_page * MEM_PAGESIZE;
+  pcb->pagetable[MEM_HEAP_PTE_PAGE] = MemorySetupPte(alloc_page);
   // System stack
   alloc_page = MemoryAllocPage(); 
   if (alloc_page == MEM_FAIL){

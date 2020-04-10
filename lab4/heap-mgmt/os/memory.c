@@ -296,30 +296,58 @@ uint32 MemorySetupPte (uint32 page) {
  return ((page * MEM_PAGESIZE) | MEM_PTE_VALID);
 }
 
-void *malloc(int memsize) { // Q5: CHECK: make sure to allocate in word multiples
+void* malloc(int memsize) { // Q5: CHECK: make sure to allocate in word multiples
   int i = 0;
   int j = 0;
-  int min_order = maxHeapOrder;
-  //int order0_need = (memsize/MEM_HEAP_ORDER0);
-  //int max_div = 1 << maxHeapOrder;
+  int min_order = 0;
+  int min_order0_count = 0;
+  int min_order_possible - 0;
+  int alloc_index = -1;
+  
+  // SIZE FITS
   if((memsize > (MEM_HEAP_ORDER0 << maxHeapOrder)) || (memsize <= 0)) {
     return NULL;
   }
-  
-  if(memsize % MEM_HEAP_ORDER0) { order0_need += 1; }
-  /*while(!(order0_need / max_div)) { // NEED: find minimum order
-    min_order--;
-    max_div = max_div >> 1;
-  }*/
+  // MINIMUM ORDER AND SIZE
+  while((MEM_HEAP_ORDER0 << min_order) < memsize) { min_order += 1; }
+  min_order0_count = (1 << min_order);
+  // FIND AVAILABLE INDEX
+  min_order_possible = 1 << (maxHeapOrder - min_order);
   j = 0;
-  for(i = 0; i < min_order; i++) {
-    while(currentPCB->heapAlloc[j]) { // CHECK: might be more efficient but unsure if it works
-      if(j >= MEM_HEAP_ORDER0_COUNT) return NULL;
-      j += currentPCB->heapAlloc[j];
+  for(i = 0; i < min_order_possible; i++) {
+    for(j = 0; j < min_order0_count; j++) {
+      if(currentPCB->heapAlloc[j + i*min_order0_count] != 0) {
+        alloc_index = -1;
+        break;
+      }
+      if(j == min_order0_count - 1) { alloc_index = i*min_order0_count; }
     }
+    if(alloc_index != -1) { break; }
   }
-  return NULL;
+  if(alloc_index == -1) { return NULL; }
+  
+  // ALLOCATE AVAILABLE INDEX
+  currentPCB->heapAlloc[alloc_index] = min_order0_count;
+  // PRINT
+  printf("Created a ");
+  printHeapInfo(min_order0_count * MEM_HEAP_ORDER0, alloc_index);
+  // RETURN VADDR
+  return (MEM_HEAP_PTE_PAGE * MEM_PAGESIZE) + alloc_index*MEM_HEAP_ORDER0;
 }
 int mfree(void* ptr) { // Q5:
-  return MEM_FAIL;
+  int alloc_index = (((uint32)ptr) & MEM_ADDRESS_OFFSET_MASK) / MEM_HEAP_ORDER0;
+  int order0_free_count = currentPCB->heapAlloc[alloc_index];
+  int memsize = order0_free_count * MEM_HEAP_ORDER0;
+  // VALID PTR
+  if(ptr == NULL || (((uint32)ptr) & MEM_PTE_MASK) / MEM_PAGESIZE != MEM_HEAP_PTE_PAGE) { return MEM_FAIL; }
+  // PRINT
+  printf("Freeing ");
+  PrintHeapInfo(memsize, alloc_index);
+  // FREE
+  currentPCB->heapAlloc[alloc_index] = 0;
+  return memsize;
+}
+void PrintHeapInfo(int memsize, int alloc_index) {
+  printf("heap block of size %d bytes: virtual address %08x, physical address %08x\n", memsize, (MEM_HEAP_PTE_PAGE * MEM_PAGESIZE) + alloc_index*MEM_HEAP_ORDER0,
+                                                                                       (currentPCB->pagetable[MEM_HEAP_PTE_PAGE] & MEM_PTE_MASK) + alloc_index*MEM_HEAP_ORDER0);
 }

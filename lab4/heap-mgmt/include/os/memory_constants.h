@@ -38,4 +38,5 @@
 // Q5: HEAP
 #define MEM_HEAP_ORDER0 32 // bytes
 #define MEM_HEAP_ORDER0_COUNT (MEM_PAGESIZE/MEM_HEAP_ORDER0)
+#define MEM_HEAP_PTE_PAGE 4
 #endif	// _memory_constants_h_
