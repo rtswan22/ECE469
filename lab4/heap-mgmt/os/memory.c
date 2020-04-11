@@ -336,8 +336,8 @@ void* malloc(int memsize) { // Q5: CHECK: make sure to allocate in word multiple
   PrintMallocCreate(min_order, alloc_index);
   // ALLOCATE AVAILABLE INDEX
   currentPCB->heapAlloc[alloc_index] = min_order0_count;
-  //PrintHeapAlloc(currentPCB); // NOT:
   // RETURN VADDR
+  //PrintHeapAlloc(currentPCB); // NOT:
   return (void*)((MEM_HEAP_PTE_PAGE * MEM_PAGESIZE) + alloc_index*MEM_HEAP_ORDER0);
 }
 int mfree(void* ptr) { // Q5:
@@ -350,112 +350,128 @@ int mfree(void* ptr) { // Q5:
   }
   // VALID PTR
   if(ptr == NULL || (((uint32)ptr) & MEM_PTE_MASK) / MEM_PAGESIZE != MEM_HEAP_PTE_PAGE) { return MEM_FAIL; }
-  // PRINT
-  PrintMfree(order, alloc_index);
-  //printf("Freeing ");
-  //PrintHeapInfo(memsize, alloc_index);
   // FREE
   currentPCB->heapAlloc[alloc_index] = 0;
+  // PRINT
+  PrintMfree(order, alloc_index);
+  PrintMfreeCoalesce(order, alloc_index);
   return memsize;
 }
 void PrintMalloc(int order, int alloc_index, int memsize) {
   int block_size = MEM_HEAP_ORDER0 << order;
   int addr = alloc_index * MEM_HEAP_ORDER0; // note that this is relative to heap
-  printf("Allocated the block: order = %d, addr = %04d, requested mem size = %04d, block size = %04d\n", order, addr, memsize, block_size);
+  printf("Allocated the block: order = %d, addr = %4d, requested mem size = %4d, block size = %4d\n", order, addr, memsize, block_size);
 }
 void PrintMfree(int order, int alloc_index) {
   int block_size = MEM_HEAP_ORDER0 << order;
   int addr = alloc_index * MEM_HEAP_ORDER0; // note that this is relative to heap
-  printf("    Freed the block: order = %d, addr = %04d, size = %04d\n", order, addr, block_size);
+  printf("    Freed the block: order = %d, addr = %4d, size = %4d\n", order, addr, block_size);
 }
 void PrintMallocCreate(int order, int alloc_index) {
   int block_size = MEM_HEAP_ORDER0 << order;
   int addr = alloc_index * MEM_HEAP_ORDER0; // note that this is relative to heap
   int right_buddy = (addr / block_size) % 2; // a flag for if it is a right buddy
-  int order_i_parent_index;
-  int order_i_parent_buddy_index;
+  int order_i_left_index;
+  int order_i_right_index;
   int i;
   int j;
-  int k;
   int new_flag = 1;
-  int orderN_count;
-  int orderN_size;
-  int start_block = 0;
-  int block_buddy = 0;
-  if(maxHeapOrder == order || right_buddy) return;
-  else {
-    for(i = maxHeapOrder; i > order; i--) { // for each order above 'order'
-      order_i_parent_index = (alloc_index / (1 << i)) * (1 << i);
-      if((order_i_parent_index / (1 << i)) % 2) {}
-      else {
-        new_flag = 1;
-        for(j = 0; j < (1 << i); j++) { // has order 'i' parent been used
-          if(currentPCB->heapAlloc[order_i_parent_index + j]) {
-            new_flag = -1;
-            break;
-          }
-        }
-        if(new_flag == 1 && i != (maxHeapOrder)) { // has order 'i' parent buddy been used
-          order_i_parent_buddy_index = order_i_parent_index + (1 << i);
-          for(j = 0; j < (1 << i); j++) {
-            if(currentPCB->heapAlloc[order_i_parent_buddy_index + j]) {
-              new_flag = -1;
-              break;
-            }
-          }
-        }
-        if(new_flag == 1) {
-          // LEFT
-          printf("Created a  left child node (order = %d, addr = %4d, size = %4d)", i - 1, alloc_index*MEM_HEAP_ORDER0, MEM_HEAP_ORDER0 << (i - 1));
-          printf(" of parent (order = %d, addr = %4d, size = %4d)\n", i, alloc_index*MEM_HEAP_ORDER0, MEM_HEAP_ORDER0 << i);
-          // RIGHT
-          printf("Created a right child node (order = %d, addr = %4d, size = %4d)", i - 1, (alloc_index + (1 << (i - 1)))*MEM_HEAP_ORDER0, MEM_HEAP_ORDER0 << (i - 1));
-          printf(" of parent (order = %d, addr = %4d, size = %4d)\n", i, alloc_index*MEM_HEAP_ORDER0, MEM_HEAP_ORDER0 << i);
-          //print creation of two children of order 'i' from parent of order 'i+1'
-        }
-      }
-    }
+  if(maxHeapOrder == order || right_buddy) {
+    return;
   }
-  // PRINT THE FINAL CHILD SPLIT AND IF THE FINAL BUDDY HAS NOT BEEN ALLOCATED
-  
-  /*else {
-    for(i = maxHeapOrder; i > order; i--) { // for each order above 'order'
-      orderN_count = 1 << (maxHeapOrder - i);
-      start_block *= 2; // adjust startblock for next order
-      //printf("start block %d\n", start_block);
-      for(j = start_block; j < orderN_count; j++) { // for each block of order 'i'
-        orderN_size = 1 << i;
-        new_flag = 1;
-        for(k = 0; k < orderN_size; k++) { // for each element in the block of order 'i'
-          if(currentPCB->heapAlloc[k + j*orderN_size]) {
-            printf("taken index : %d\n", k + j*orderN_size); // NOT:
-            new_flag = -1;
-            break;
-          }
-        }
-        if(new_flag == 1) { // NEED: fix the print statements
-          start_block = j;
-          block_buddy = start_block - (start_block % 2);
-          // if buddy has been allocated, break
-          // print created right/left of order (i - 1)
-          printf("Created a ??? child node (order = %d, addr = %04d, size = %04d)", i - 1, j*orderN_size*MEM_HEAP_ORDER0, MEM_HEAP_ORDER0 << (i - 1));
-          printf(" of parent (order = %d, addr = %04d, size = %04d)\n", i, j*orderN_size*MEM_HEAP_ORDER0, MEM_HEAP_ORDER0 << i);
+  else {
+    for(i = maxHeapOrder - 1; i >= order; i--) { // for each order above 'order'
+      if((alloc_index / (1 << i)) % 2) { // if parent is odd
+        order_i_right_index = (alloc_index / (1 << i)) * (1 << i);
+        order_i_left_index = order_i_right_index - (1 << i);
+      } else { // if parent is even
+        order_i_left_index = (alloc_index / (1 << i)) * (1 << i);
+        order_i_right_index = order_i_left_index + (1 << i);
+      }
+      new_flag = 1;
+      for(j = 0; j < (1 << i); j++) { // has order 'i' parent been used
+        if(currentPCB->heapAlloc[order_i_left_index + j]) {
+          new_flag = -1;
           break;
         }
       }
+      if(new_flag == 1 && i != (maxHeapOrder)) { // has order 'i' parent buddy been used
+        for(j = 0; j < (1 << i); j++) {
+          if(currentPCB->heapAlloc[order_i_right_index + j]) {
+            new_flag = -1;
+            break;
+          }
+        }
+      }
+      if(new_flag == 1) {
+        // LEFT
+        printf("Created a  left child node (order = %d, addr = %4d, size = %4d)", i, alloc_index*MEM_HEAP_ORDER0, MEM_HEAP_ORDER0 << (i));
+        printf(" of parent (order = %d, addr = %4d, size = %4d)\n", i+1, alloc_index*MEM_HEAP_ORDER0, MEM_HEAP_ORDER0 << (i + 1));
+        // RIGHT
+        printf("Created a right child node (order = %d, addr = %4d, size = %4d)", i, (alloc_index + (1 << i))*MEM_HEAP_ORDER0, MEM_HEAP_ORDER0 << i);
+        printf(" of parent (order = %d, addr = %4d, size = %4d)\n", (i + 1), alloc_index*MEM_HEAP_ORDER0, MEM_HEAP_ORDER0 << (i + 1));
+      }
     }
-  }*/
+  }
   
-}/*
+}
 void PrintMfreeCoalesce(int order, int alloc_index) {
-  int block_size = MEM_HEAP_ORDER0 << order;
-  int addr = alloc_index * MEM_HEAP_ORDER0; // note that this is relative to heap
-  
-}*/
+  //int block_size = MEM_HEAP_ORDER0 << order;
+  //int addr = alloc_index * MEM_HEAP_ORDER0; // note that this is relative to heap
+  //int right_buddy = (addr / block_size) % 2; // a flag for if it is a right buddy
+  int order_i_child_index;
+  int order_i_child_buddy_index;
+  int i;
+  int j;
+  int new_flag = 1;
+  int left_buddy;
+  int right_buddy;
+  if(maxHeapOrder == order) return;
+  else {
+    for(i = order; i < maxHeapOrder; i++) { // for each order above 'order'
+      order_i_child_index = (alloc_index / (1 << i)) * (1 << i);
+      //printf("child index %d\n", order_i_child_index); // NOT:
+      //new_flag = 1;
+      if(i != order) {
+        for(j = 0; j < (1 << i); j++) { // has order 'i' parent been used
+          if(currentPCB->heapAlloc[order_i_child_index + j]) {
+            //printf("failed first index %d\n", order_i_child_index + j); // NOT:
+            new_flag = -1;
+            break;
+          }
+        }
+      }
+      if(new_flag == 1) { // has order 'i' parent buddy been used
+        order_i_child_buddy_index = order_i_child_index + (((order_i_child_index / (1 << i)) % 2) ? -1 : 1) * (1 << i);
+        //printf("child %d, buddy %d\n", order_i_child_index, order_i_child_buddy_index); // NOT:
+        for(j = 0; j < (1 << i); j++) {
+          if(currentPCB->heapAlloc[order_i_child_buddy_index + j]) {
+            new_flag = -1;
+            break;
+          }
+        }
+      }
+      if(new_flag == 1) {
+        if(((order_i_child_index / (1 << i)) % 2)) { // if child right
+          left_buddy = order_i_child_buddy_index;
+          right_buddy = order_i_child_index;
+        }
+        else { // if child left
+          left_buddy = order_i_child_index;
+          right_buddy = order_i_child_buddy_index;
+        }
+        printf("Coalesced buddy nodes (order = %d, addr = %4d, size = %4d) & (order = %d, addr = %4d, size = %4d)\n",
+              i, left_buddy*MEM_HEAP_ORDER0, MEM_HEAP_ORDER0 << i, i, right_buddy*MEM_HEAP_ORDER0, MEM_HEAP_ORDER0 << i);
+        printf("into the parent (order = %d, addr = %4d, size = %4d)\n", i + 1, left_buddy*MEM_HEAP_ORDER0, MEM_HEAP_ORDER0 << (i + 1));
+      }
+      else { return; }
+    }
+  }
+}
 void PrintHeapAlloc(PCB* pcb) {
   int i;
   for(i = 0; i < MEM_HEAP_ORDER0_COUNT; i++) {
-    if(pcb->heapAlloc[i]) printf("Heap[%04d]: %04d\n", i*MEM_HEAP_ORDER0, pcb->heapAlloc[i]*MEM_HEAP_ORDER0);
+    if(pcb->heapAlloc[i]) printf("Heap[%4d]: %4d\n", i*MEM_HEAP_ORDER0, pcb->heapAlloc[i]*MEM_HEAP_ORDER0);
   }
 }
 /*void PrintHeapInfo(int memsize, int alloc_index) {
