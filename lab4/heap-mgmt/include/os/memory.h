@@ -30,5 +30,7 @@ uint32 MemorySetupPte (uint32 page);
 
 void* malloc(int memsize);
 int mfree(void* ptr);
+void PrintMalloc(int order, int alloc_index, int memsize);
+void PrintMfree(int order, int alloc_index);
 
 #endif	// _memory_h_

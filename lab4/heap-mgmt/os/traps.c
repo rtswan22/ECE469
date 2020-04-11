@@ -447,16 +447,16 @@ dointerrupt (unsigned int cause, unsigned int iar, unsigned int isr,
       handle = SemHandleSignal(ihandle);
       ProcessSetResult(currentPCB, handle); //Return 1 or 0
       break;
-    //case TRAP_MALLOC:
-      //ihandle = GetIntFromTrapArg(trapArgs, isr & DLX_STATUS_SYSMODE);
+    case TRAP_MALLOC:
+      ihandle = GetIntFromTrapArg(trapArgs, isr & DLX_STATUS_SYSMODE);
       //ihandle = (int)malloc(currentPCB, ihandle);
-      //ProcessSetResult(currentPCB, ihandle); //Return handle
-      //break;
-    //case TRAP_MFREE:
-      //ihandle = GetIntFromTrapArg(trapArgs, isr & DLX_STATUS_SYSMODE);
+      ProcessSetResult(currentPCB, (int)malloc(ihandle)); //Return handle
+      break;
+    case TRAP_MFREE:
+      ihandle = GetIntFromTrapArg(trapArgs, isr & DLX_STATUS_SYSMODE);
       //ihandle = mfree(currentPCB, (void*)ihandle);
-      //ProcessSetResult(currentPCB, ihandle); //Return handle
-      //break;
+      ProcessSetResult(currentPCB, mfree((void*)ihandle)); //Return handle
+      break;
     case TRAP_LOCK_CREATE:
       ihandle = LockCreate();
       ProcessSetResult(currentPCB, ihandle); //Return handle
