@@ -32,5 +32,7 @@ void* malloc(int memsize);
 int mfree(void* ptr);
 void PrintMalloc(int order, int alloc_index, int memsize);
 void PrintMfree(int order, int alloc_index);
+void PrintMallocCreate(int order, int alloc_index);
 
+void PrintHeapAlloc(PCB* pcb);
 #endif	// _memory_h_

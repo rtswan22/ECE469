@@ -21,6 +21,8 @@ void main (int argc, char *argv[])
   alloc1 = malloc(1);
   alloc2 = malloc(1024);
   alloc3 = malloc(2048);
+  mfree(alloc1);
+  alloc1 = malloc(1024);
 
   // Signal the semaphore to tell the original process that we're done
   if(sem_signal(s_procs_completed) != SYNC_SUCCESS) {
