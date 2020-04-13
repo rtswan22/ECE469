@@ -72,6 +72,7 @@ void main (int argc, char *argv[])
 {
   int test_count = 0;             // Used to store number of processes to create
   int i;                               // Loop index variable
+  int test_num = 0;
   if (argc != 2) {
     Printf("Usage: %s <number of hello world processes to create>\n", argv[0]);
     Exit();
@@ -87,22 +88,28 @@ void main (int argc, char *argv[])
   // PROCESSES
   for(i=1; i<=test_count; i++) {
     Printf("-------------------------------------------------------------------------------------\n");
-    Printf("makeprocs (%d): test2_%d CREATE\n", getpid(), i);
+    Printf("makeprocs (%d): test CREATE\n", getpid());
     switch(i)
     {
       case 1: run_test2_1();
+              test_num = 1;
               break;
-      case 2: run_test2_2();
+      case 2: run_test2_3();
+              test_num = 3;
               break;
-      case 3: run_test2_3();
+      case 3: run_test2_4();
+              test_num = 4;
               break;
-      case 4: run_test2_4(); // NEED: not freeing pages correctly?
+      case 4: run_test2_5();
+              test_num = 5;
               break;
-      case 5: run_test2_5();
+      case 5: run_test2_6();
+              test_num = 6;
               break;
-      case 6: run_test2_6();
+      case 6: run_test2_2();
+              test_num = 2;
               break;
-      default: Printf("makeprocs (%d): invalid test number %d\n", getpid(), i);
+      default: Printf("makeprocs (%d): invalid test number %d\n", getpid(), test_num);
     }
     Printf("makeprocs (%d): test2_%d DONE\n", getpid(), i);
   }

@@ -1091,11 +1091,11 @@ void ProcessPrintPTE(PCB* pcb) { // Q4
   int i;
   
   printf("BEGIN: Printing PCB %d PTE\n", GetPidFromAddress(pcb));
-  printf("(PCB %d) currentSavedFrame: %08x\n", GetPidFromAddress(pcb), pcb->currentSavedFrame);
-  printf("(PCB %d) sysStackPtr: %08x\n", GetPidFromAddress(pcb), pcb->sysStackPtr);
-  printf("(PCB %d) sysStackArea: %08x\n", GetPidFromAddress(pcb), pcb->sysStackArea);
+  printf("(PCB %d) currentSavedFrame: 0x%08x\n", GetPidFromAddress(pcb), pcb->currentSavedFrame);
+  printf("(PCB %d) sysStackPtr: 0x%08x\n", GetPidFromAddress(pcb), pcb->sysStackPtr);
+  printf("(PCB %d) sysStackArea: 0x%08x\n", GetPidFromAddress(pcb), pcb->sysStackArea);
   for(i = 0; i < MEM_L1TABLE_SIZE; i++) {
-    if(pcb->pagetable[i]) printf("(PCB %d) PTE[%d]: %08x\n", GetPidFromAddress(pcb), i, pcb->pagetable[i]);
+    if(pcb->pagetable[i]) printf("(PCB %d) PTE[%d]: 0x%08x\n", GetPidFromAddress(pcb), i, pcb->pagetable[i]);
   }
   printf("DONE: Printing PCB %d PTE\n", GetPidFromAddress(pcb));
 }
